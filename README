@@ -24,9 +24,9 @@ Works on
 
 It has been tested on the following devices and platform combinations:
 
- - Samsung Apollo (i5800) on Android 2.2
-
-SMP should work on Android 2.1.
+ - Samsung Galaxy 3 (i5800) on Android 2.2
+ - Android emulator on Android 2.1-update1
+ - Android emulator on Android 2.2
 
 
 Contact
