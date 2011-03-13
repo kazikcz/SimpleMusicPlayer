@@ -3,11 +3,10 @@
     <string name="app_name">SimpleMusicPlayer</string>
     <string name="button_play">Play</string>
     <string name="button_pause">Pause</string>
-    <string name="button_skip">Skip</string><string name="label_songs_enqueued">Enqueued songs:</string>
-    <string name="label_songs_available">Available songs:</string>
+    <string name="button_skip">Skip</string>
     <string name="label_filter">filter songs</string>
-    <string name="option_menu_enqueue_new">Enqueue</string><string name="option_menu_remove_all">Remove all</string><string name="option_menu_shuffle">Shuffle</string><string name="option_menu_enqueue_all">Enqueue all</string><string name="activity_name_playlist">SimpleMusicPlayer Playlist</string>
-    <string name="activity_name_main">SimpleMusicPlayer</string>
+    <string name="option_menu_enqueue_new">Enqueue</string><string name="option_menu_remove_all">Remove all</string><string name="option_menu_shuffle">Shuffle</string><string name="option_menu_enqueue_all">Enqueue all</string><string name="activity_name_songlist">SimpleMusicPlayer Available songs</string>
+    <string name="activity_name_main">SimpleMusicPlayer Enqueued songs</string>
     <string name="service_name_player">SimpleMusicPlayer Service</string>
     
     <string name="context_menu_play_now">Play now</string>

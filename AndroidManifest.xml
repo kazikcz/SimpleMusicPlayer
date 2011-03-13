@@ -14,7 +14,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="Songlist" android:label="@string/activity_name_playlist" android:windowSoftInputMode="stateHidden"></activity>
+        <activity android:name="Songlist" android:windowSoftInputMode="stateHidden" android:label="@string/activity_name_songlist"></activity>
         <service android:name="Player" android:label="@string/service_name_player"></service>
 
     </application>
