@@ -1,0 +1,37 @@
+SimpleMusicPlayer
+-----------------
+
+SMP is a minimalistic music player for the Android system. It is enqueue list
+oriented. It does not store any permanent data.
+
+SMP is divided into two parts:
+ - UI
+ - backend
+
+The backend is a Service and is destroyed only when the user quits the UI while
+a playback is stopped. The playback will be paused when an incomming call
+occurs, an outgoing call is dialed/ongoing, headset plug is disconnected. The
+playback is restored when according event is reversed (i.e. pluging back the
+headset will resume the playback only when the original reason for pausing was
+headset unplugging).
+
+SMP is licensed under the terms of 2-clause BSD License (aka ,,Simplified BSD
+License'').
+
+
+Works on
+--------
+
+It has been tested on the following devices and platform combinations:
+
+ - Samsung Apollo (i5800) on Android 2.2
+
+SMP should work on Android 2.1.
+
+
+Contact
+-------
+
+You can email me: kazikcz at gmail dot com
+
+Feel free to email me if you find a bug or have a suggestion.
