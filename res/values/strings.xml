@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SimpleMusicPlayer</string><string name="app_version">0.1</string>
+    <string name="app_name">SimpleMusicPlayer</string>
     <string name="button_play">Play</string>
     <string name="button_pause">Pause</string>
     <string name="button_skip">Skip</string><string name="label_songs_enqueued">Enqueued songs:</string>
