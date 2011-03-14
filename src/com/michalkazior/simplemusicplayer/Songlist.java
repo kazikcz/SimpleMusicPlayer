@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnCreateContextMenuListener;
 import android.view.View.OnKeyListener;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -187,7 +188,7 @@ public class Songlist extends Activity {
 		String words[] = filter.getText().toString().toLowerCase().split(" ");
 
 		for (Song song : songs) {
-			String name = song.toString().toLowerCase();
+			String name = song.getPath().toLowerCase();
 			boolean matches = true;
 			for (String word : words) {
 				if (!name.contains(word)) matches = false;
@@ -195,8 +196,7 @@ public class Songlist extends Activity {
 			if (matches) filtered.add(song);
 		}
 
-		availableSongs.setAdapter(new ArrayAdapter<Object>(this, R.layout.listitem, filtered
-				.toArray()));
+		availableSongs.setAdapter(new SongAdapter(this, R.layout.listitem, filtered.toArray(new Song[] {})));
 	}
 
 	@Override

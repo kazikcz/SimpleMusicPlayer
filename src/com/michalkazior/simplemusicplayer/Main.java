@@ -308,7 +308,7 @@ public class Main extends Activity {
 			@Override
 			public void onReceive(Context context, Intent intent) {
 				songs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
-				enqueuedSongs.setAdapter(new ArrayAdapter<Song>(
+				enqueuedSongs.setAdapter(new SongAdapter(
 						getApplicationContext(),
 						R.layout.listitem,
 						songs));
