@@ -181,7 +181,7 @@ public class Main extends Activity {
 
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
-					for (int i=1; i<m.songs.length; ++i) {
+					for (int i = 1; i < m.songs.length; ++i) {
 						m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
 								"song", m.songs[i]));
 					}
@@ -218,7 +218,7 @@ public class Main extends Activity {
 					 */
 					ArrayList<Song> songs = new ArrayList<Song>();
 
-					for (int i=1; i<m.songs.length; ++i) {
+					for (int i = 1; i < m.songs.length; ++i) {
 						m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
 								"song", m.songs[i]));
 						songs.add(m.songs[i]);

@@ -156,7 +156,7 @@ public class Songlist extends Activity {
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
 				if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
 					updateAvailableSongsListView();
-					InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+					InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 					imm.hideSoftInputFromWindow(filter.getWindowToken(), 0);
 					return true;
 				}
@@ -198,7 +198,8 @@ public class Songlist extends Activity {
 			if (matches) filtered.add(song);
 		}
 
-		availableSongs.setAdapter(new SongAdapter(this, R.layout.listitem, filtered.toArray(new Song[] {})));
+		availableSongs.setAdapter(new SongAdapter(this, R.layout.listitem, filtered
+				.toArray(new Song[] {})));
 	}
 
 	@Override
