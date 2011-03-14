@@ -30,8 +30,8 @@ public class SongAdapter extends ArrayAdapter<Song> {
 			File f = new File(s.getPath());
 			TextView tv1 = (TextView) v.findViewById(R.id.listItemTextView1);
 			TextView tv2 = (TextView) v.findViewById(R.id.listItemTextView2);
-			tv1.setText(f.getParent());
-			tv2.setText(f.getName());
+			tv1.setText(f.getName());
+			tv2.setText(f.getParent());
 		}
 		return v;
 	}
