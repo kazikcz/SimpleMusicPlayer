@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.view.View.OnCreateContextMenuListener;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -308,7 +309,7 @@ public class Main extends Activity {
 			@Override
 			public void onReceive(Context context, Intent intent) {
 				songs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
-				enqueuedSongs.setAdapter(new SongAdapter(
+				enqueuedSongs.setAdapter(new MainSongAdapter(
 						getApplicationContext(),
 						R.layout.listitem,
 						songs));
@@ -417,4 +418,21 @@ public class Main extends Activity {
 		OptionMenu.run(this, item);
 		return super.onOptionsItemSelected(item);
 	}
+
+	private class MainSongAdapter extends SongAdapter {
+		public MainSongAdapter(Context context, int textViewResourceId, Song[] objects) {
+			super(context, textViewResourceId, objects);
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			View v = super.getView(position, convertView, parent);
+			if (position == 0 && v != null) {
+				v.setBackgroundResource(R.color.color_listitem_bg_highlight);
+			} else {
+				v.setBackgroundResource(R.color.color_listitem_bg_normal);
+			}
+			return v;
+		}
+	};
 }

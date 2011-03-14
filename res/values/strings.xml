@@ -35,5 +35,7 @@
     <string name="license_close">Close</string>
     <color name="color_listitem_small">#88AAFF</color>
     <color name="color_listitem_big">#FFFFFF</color>
+    <color name="color_listitem_bg_highlight">#123</color>
+    <color name="color_listitem_bg_normal">#000</color>
     
 </resources>
