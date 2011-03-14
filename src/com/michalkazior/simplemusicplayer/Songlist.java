@@ -156,6 +156,8 @@ public class Songlist extends Activity {
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
 				if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
 					updateAvailableSongsListView();
+					InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+					imm.hideSoftInputFromWindow(filter.getWindowToken(), 0);
 					return true;
 				}
 				return false;
