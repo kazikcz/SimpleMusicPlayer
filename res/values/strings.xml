@@ -33,8 +33,8 @@
     <string name="license_title">License</string>
     <string name="license_message">This software is licensed under the 2-clause BSD license. Copyright 2011 Michał Kazior.</string>
     <string name="license_close">Close</string>
-    <color name="color_listitem_small">#88AAFF</color>
-    <color name="color_listitem_big">#FFFFFF</color>
+    <color name="listitem_small">#88AAFF</color>
+    <color name="listitem_big">#FFFFFF</color>
     <color name="listitem_bg_normal">#000</color>
     <color name="listitem_bg_selected">#888</color>
     <color name="listitem_bg_highlight">#123</color>
