@@ -40,6 +40,7 @@ public class Main extends Activity {
 	private Song[] songs = {};
 	private Player.State state = State.IS_STOPPED;
 	private Song selectedSong = null;
+	private boolean doNotStopService = false;
 
 	/*
 	 * Position of the seekbar before user started draging.
@@ -401,7 +402,7 @@ public class Main extends Activity {
 			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 			case IS_STOPPED:
-				stopService(new Intent(this, Player.class));
+				if (!doNotStopService) stopService(new Intent(this, Player.class));
 				break;
 		}
 		super.onDestroy();
@@ -417,6 +418,19 @@ public class Main extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		OptionMenu.run(this, item);
 		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		/*
+		 * If the user does not explicitly close (with the Back button) the UI,
+		 * we cannot kill the Service.
+		 * 
+		 * Otherwise the Player Service will be stopped when screen orientation
+		 * restarts the Main Activity.
+		 */
+		doNotStopService = true;
+		super.onSaveInstanceState(outState);
 	}
 
 	private class MainSongAdapter extends SongAdapter {
