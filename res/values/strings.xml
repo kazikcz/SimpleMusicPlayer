@@ -38,5 +38,6 @@
     <color name="listitem_bg_normal">#000</color>
     <color name="listitem_bg_selected">#888</color>
     <color name="listitem_bg_highlight">#123</color>
+    <color name="listitem_divider">#333</color>
     
 </resources>

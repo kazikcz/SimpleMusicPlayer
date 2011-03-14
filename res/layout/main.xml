@@ -3,8 +3,8 @@
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent" android:gravity="center_horizontal|bottom" android:padding="5px">
-    <LinearLayout android:id="@+id/linearLayout2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_weight="1" android:background="@color/listitem_bg_highlight" android:padding="1px" android:layout_marginBottom="5px">
-        <ListView android:layout_height="match_parent" android:layout_width="match_parent" android:id="@+id/enqueuedSongs" android:background="@color/listitem_bg_normal"></ListView>
+    <LinearLayout android:id="@+id/linearLayout2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_weight="1" android:background="@color/listitem_divider" android:padding="1px" android:layout_marginBottom="5px">
+        <ListView android:layout_height="match_parent" android:layout_width="match_parent" android:id="@+id/enqueuedSongs" android:background="@color/listitem_bg_normal" android:dividerHeight="1px" android:divider="@color/listitem_divider"></ListView>
     </LinearLayout>
     <LinearLayout android:layout_height="wrap_content" android:id="@+id/linearLayout1" android:layout_width="wrap_content">
         <Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/playButton" android:text="@string/button_play" android:ellipsize="none"></Button>
