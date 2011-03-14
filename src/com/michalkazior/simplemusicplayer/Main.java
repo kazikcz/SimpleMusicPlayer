@@ -40,6 +40,13 @@ public class Main extends Activity {
 	private Player.State state = State.IS_STOPPED;
 	private Song selectedSong = null;
 
+	/*
+	 * Position of the seekbar before user started draging.
+	 * 
+	 * -1 means the user is not dragging the seekbar.
+	 */
+	private int oldSeekBarPosition = -1;
+
 	/**
 	 * Context menu for enqueued list items
 	 */
@@ -281,8 +288,10 @@ public class Main extends Activity {
 								(position / 1000) / 60, (position / 1000) % 60,
 								(duration / 1000) / 60, (duration / 1000) % 60,
 								Math.round(100 * position / duration)));
-						songSeekBar.setMax(duration);
-						songSeekBar.setProgress(position);
+						if (oldSeekBarPosition == -1) {
+							songSeekBar.setMax(duration);
+							songSeekBar.setProgress(position);
+						}
 						playButton.setText(R.string.button_pause);
 						break;
 					case IS_PAUSED:
@@ -344,12 +353,14 @@ public class Main extends Activity {
 
 			@Override
 			public void onStopTrackingTouch(SeekBar seekBar) {
+				oldSeekBarPosition = -1;
 				sendBroadcast(Player.Remote.Request.Seek.getIntent().putExtra("position",
 						lastProgress));
 			}
 
 			@Override
 			public void onStartTrackingTouch(SeekBar seekBar) {
+				oldSeekBarPosition = seekBar.getProgress();
 			}
 
 			@Override
