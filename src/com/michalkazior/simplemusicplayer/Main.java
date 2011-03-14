@@ -311,6 +311,7 @@ public class Main extends Activity {
 		 */
 		sendBroadcast(Player.Remote.Request.GetAvailableSongs.getIntent());
 		sendBroadcast(Player.Remote.Request.GetEnqueuedSongs.getIntent());
+		sendBroadcast(Player.Remote.Request.GetState.getIntent());
 		startService(new Intent(this, Player.class));
 
 		playButton.setOnClickListener(new OnClickListener() {
