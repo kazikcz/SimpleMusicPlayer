@@ -65,7 +65,8 @@ public class Song implements Parcelable {
 
 	@Override
 	public String toString() {
-		return path; // todo
+		java.io.File f = new java.io.File(getPath());
+		return f.getParent() + "\n" + f.getName();
 	}
 
 	@Override
