@@ -77,6 +77,6 @@ public class Song implements Parcelable {
 
 	@Override
 	public boolean equals(Object o) {
-		return (o instanceof Song) && ((Song)o).id == this.id;
+		return (o instanceof Song) && ((Song) o).id == this.id;
 	}
 }

@@ -429,7 +429,8 @@ public class Main extends Activity {
 			View v = super.getView(position, convertView, parent);
 			if (position == 0 && v != null) {
 				v.setBackgroundResource(R.color.color_listitem_bg_highlight);
-			} else {
+			}
+			else {
 				v.setBackgroundResource(R.color.color_listitem_bg_normal);
 			}
 			return v;
