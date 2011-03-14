@@ -427,11 +427,11 @@ public class Main extends Activity {
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View v = super.getView(position, convertView, parent);
-			if (position == 0 && v != null) {
-				v.setBackgroundResource(R.color.color_listitem_bg_highlight);
-			}
-			else {
-				v.setBackgroundResource(R.color.color_listitem_bg_normal);
+			if (v != null) {
+				if (position == 0) v.setBackgroundDrawable(getResources().getDrawable(
+						R.drawable.listitem_selector_first));
+				else v.setBackgroundDrawable(getResources().getDrawable(
+						R.drawable.listitem_selector));
 			}
 			return v;
 		}
