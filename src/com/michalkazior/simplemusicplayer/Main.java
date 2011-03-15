@@ -425,8 +425,8 @@ public class Main extends Activity {
 		 * If the user does not explicitly close (with the Back button) the UI,
 		 * we cannot kill the Service.
 		 * 
-		 * Otherwise the Player Service will be stopped when screen orientation
-		 * restarts the Main Activity.
+		 * Without this the Player Service will be stopped when screen
+		 * orientation switch restarts the Main Activity.
 		 */
 		doNotStopService = true;
 		super.onSaveInstanceState(outState);
