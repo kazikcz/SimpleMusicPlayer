@@ -615,6 +615,14 @@ public class Player extends Service {
 	}
 
 	/**
+	 * Check whether external storage is mounted or not.
+	 */
+	public static boolean isExternalStorageMounted() {
+		return android.os.Environment.getExternalStorageState().compareTo(
+				android.os.Environment.MEDIA_MOUNTED) == 0;
+	}
+
+	/**
 	 * Get a list of available songs.
 	 * 
 	 * The function returns a list of songs stored in the media database from an
@@ -629,8 +637,7 @@ public class Player extends Service {
 		 * 
 		 * So instead, return an empty list when external storage isn't present.
 		 */
-		if (android.os.Environment.getExternalStorageState().compareTo(
-				android.os.Environment.MEDIA_MOUNTED) != 0) {
+		if (!isExternalStorageMounted()) {
 			Toast.makeText(this, R.string.msg_err_notmounted, Toast.LENGTH_LONG).show();
 			return new Song[] {};
 		}

@@ -128,6 +128,12 @@ public class Songlist extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		if (!Player.isExternalStorageMounted()) {
+			setContentView(R.layout.songlist_notmounted);
+			return;
+		}
+
 		setContentView(R.layout.songlist);
 
 		availableSongs = (ListView) findViewById(R.id.playlistAvailableSongsListView);
