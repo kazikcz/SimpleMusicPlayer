@@ -19,6 +19,8 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.view.View.OnCreateContextMenuListener;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -369,6 +371,14 @@ public class Main extends Activity {
 				if (fromUser) {
 					lastProgress = progress;
 				}
+			}
+		});
+
+		registerForContextMenu(enqueuedSongs);
+		enqueuedSongs.setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+				view.showContextMenu();
 			}
 		});
 

@@ -16,6 +16,8 @@ import android.view.View.OnCreateContextMenuListener;
 import android.view.View.OnKeyListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -138,6 +140,14 @@ public class Songlist extends Activity {
 
 		availableSongs = (ListView) findViewById(R.id.playlistAvailableSongsListView);
 		filter = (EditText) findViewById(R.id.playlistFilterEditText);
+
+		registerForContextMenu(availableSongs);
+		availableSongs.setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+				view.showContextMenu();
+			}
+		});
 
 		availableSongs.setOnCreateContextMenuListener(new OnCreateContextMenuListener() {
 			@Override
