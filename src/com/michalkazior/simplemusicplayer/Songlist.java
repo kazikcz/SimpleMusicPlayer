@@ -128,7 +128,7 @@ public class Songlist extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.playlist);
+		setContentView(R.layout.songlist);
 
 		availableSongs = (ListView) findViewById(R.id.playlistAvailableSongsListView);
 		filter = (EditText) findViewById(R.id.playlistFilterEditText);
