@@ -28,11 +28,6 @@
 	<string name="dialog_are_you_sure">Are you sure?</string>
 	<string name="dialog_yes">Yes</string>
 	<string name="dialog_no">No</string>
-	<string name="option_menu_license">License</string>
-	<string name="license_title">License</string>
-	<string name="license_message">This software is licensed under the 2-clause BSD
-		license. Copyright 2011 Michał Kazior.</string>
-	<string name="license_close">Close</string>
 	<color name="listitem_small">#88AAFF</color>
 	<color name="listitem_big">#FFFFFF</color>
 	<color name="listitem_bg_normal">#000</color>
