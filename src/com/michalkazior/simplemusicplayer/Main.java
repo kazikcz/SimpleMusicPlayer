@@ -421,7 +421,6 @@ public class Main extends Activity {
 		/*
 		 * If the service isn't running yet, the broadcast will be ignored.
 		 */
-		sendBroadcast(Player.Remote.Request.GetAvailableSongs.getIntent());
 		sendBroadcast(Player.Remote.Request.GetEnqueuedSongs.getIntent());
 		sendBroadcast(Player.Remote.Request.GetState.getIntent());
 		startService(new Intent(this, Player.class));
