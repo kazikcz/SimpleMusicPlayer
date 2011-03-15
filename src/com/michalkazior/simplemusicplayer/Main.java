@@ -409,12 +409,12 @@ public class Main extends Activity {
 						break;
 					default:
 						setupContentView();
+						enqueuedSongs.setAdapter(new MainSongAdapter(
+								getApplicationContext(),
+								R.layout.listitem,
+								songs));
 						break;
 				}
-				enqueuedSongs.setAdapter(new MainSongAdapter(
-						getApplicationContext(),
-						R.layout.listitem,
-						songs));
 			}
 		}, Player.Remote.Reply.EnqueuedSongs.getIntentFilter());
 
