@@ -25,6 +25,7 @@
 	<string name="msg_err_notmounted">External storage not mounted</string>
 	<string name="msg_service_started">Player service started</string>
 	<string name="msg_service_stopped">Player service stopped</string>
+	<string name="msg_queue_empty">No songs enqueued</string>
 	<string name="dialog_are_you_sure">Are you sure?</string>
 	<string name="dialog_yes">Yes</string>
 	<string name="dialog_no">No</string>

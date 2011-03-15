@@ -42,6 +42,7 @@ public class Main extends Activity {
 	private Player.State state = State.IS_STOPPED;
 	private Song selectedSong = null;
 	private boolean doNotStopService = false;
+	private boolean isEmpty = false;
 
 	/*
 	 * Position of the seekbar before user started draging.
@@ -262,9 +263,16 @@ public class Main extends Activity {
 		}
 	};
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+	private synchronized void setupEmptyView() {
+		if (isEmpty) return;
+
+		setContentView(R.layout.main_empty);
+		isEmpty = true;
+	}
+
+	private synchronized void setupContentView() {
+		if (!isEmpty) return;
+
 		setContentView(R.layout.main);
 
 		playButton = (Button) findViewById(R.id.playButton);
@@ -272,59 +280,6 @@ public class Main extends Activity {
 		songTime = (TextView) findViewById(R.id.songTime);
 		songSeekBar = (SeekBar) findViewById(R.id.songSeekBar);
 		enqueuedSongs = (ListView) findViewById(R.id.enqueuedSongs);
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				int duration = intent.getIntExtra("duration", 0);
-				int position = intent.getIntExtra("position", 0);
-				state = (State) intent.getSerializableExtra("state");
-
-				switch (state) {
-					case IS_STOPPED:
-						songSeekBar.setMax(0);
-						songSeekBar.setProgress(0);
-						songTime.setText("");
-						break;
-					case IS_PLAYING:
-						songTime.setText(String.format("%d:%02d / %d:%02d (%d%%)",
-								(position / 1000) / 60, (position / 1000) % 60,
-								(duration / 1000) / 60, (duration / 1000) % 60,
-								Math.round(100 * position / duration)));
-						if (oldSeekBarPosition == -1) {
-							songSeekBar.setMax(duration);
-							songSeekBar.setProgress(position);
-						}
-						playButton.setText(R.string.button_pause);
-						break;
-					case IS_PAUSED:
-						playButton.setText(R.string.button_play);
-						break;
-				}
-			}
-		}, Player.Remote.Reply.State.getIntentFilter());
-
-		/*
-		 * Update enqueued songs listview upon Reply.EnqueuedSongs
-		 */
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				songs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
-				enqueuedSongs.setAdapter(new MainSongAdapter(
-						getApplicationContext(),
-						R.layout.listitem,
-						songs));
-			}
-		}, Player.Remote.Reply.EnqueuedSongs.getIntentFilter());
-
-		/*
-		 * If the service isn't running yet, the broadcast will be ignored.
-		 */
-		sendBroadcast(Player.Remote.Request.GetAvailableSongs.getIntent());
-		sendBroadcast(Player.Remote.Request.GetEnqueuedSongs.getIntent());
-		sendBroadcast(Player.Remote.Request.GetState.getIntent());
-		startService(new Intent(this, Player.class));
 
 		playButton.setOnClickListener(new OnClickListener() {
 			@Override
@@ -391,6 +346,85 @@ public class Main extends Activity {
 				ContextMenu.generate(menu);
 			}
 		});
+
+		isEmpty = false;
+	}
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setupEmptyView();
+
+		registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				int duration = intent.getIntExtra("duration", 0);
+				int position = intent.getIntExtra("position", 0);
+				state = (State) intent.getSerializableExtra("state");
+
+				/*
+				 * Avoid updating when we display 'no songs enqueued'. It will
+				 * get updated soon enough.
+				 * 
+				 * Also avoiding setupEmptyView() here fixes the case of end of
+				 * playback which would not switch to 'no songs enqueued'
+				 * screen.
+				 */
+				if (songs.length == 0) return;
+
+				switch (state) {
+					case IS_STOPPED:
+						songSeekBar.setMax(0);
+						songSeekBar.setProgress(0);
+						songTime.setText("");
+						break;
+					case IS_PLAYING:
+						songTime.setText(String.format("%d:%02d / %d:%02d (%d%%)",
+								(position / 1000) / 60, (position / 1000) % 60,
+								(duration / 1000) / 60, (duration / 1000) % 60,
+								Math.round(100 * position / duration)));
+						if (oldSeekBarPosition == -1) {
+							songSeekBar.setMax(duration);
+							songSeekBar.setProgress(position);
+						}
+						playButton.setText(R.string.button_pause);
+						break;
+					case IS_PAUSED:
+						playButton.setText(R.string.button_play);
+						break;
+				}
+			}
+		}, Player.Remote.Reply.State.getIntentFilter());
+
+		/*
+		 * Update enqueued songs listview upon Reply.EnqueuedSongs
+		 */
+		registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				songs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
+				switch (songs.length) {
+					case 0:
+						setupEmptyView();
+						break;
+					default:
+						setupContentView();
+						break;
+				}
+				enqueuedSongs.setAdapter(new MainSongAdapter(
+						getApplicationContext(),
+						R.layout.listitem,
+						songs));
+			}
+		}, Player.Remote.Reply.EnqueuedSongs.getIntentFilter());
+
+		/*
+		 * If the service isn't running yet, the broadcast will be ignored.
+		 */
+		sendBroadcast(Player.Remote.Request.GetAvailableSongs.getIntent());
+		sendBroadcast(Player.Remote.Request.GetEnqueuedSongs.getIntent());
+		sendBroadcast(Player.Remote.Request.GetState.getIntent());
+		startService(new Intent(this, Player.class));
 	}
 
 	@Override
