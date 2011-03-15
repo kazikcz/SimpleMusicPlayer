@@ -20,7 +20,6 @@
 	<string name="context_menu_move_down">Move down</string>
 	<string name="context_menu_clone">Clone</string>
 	<string name="msg_err_io">I/O error</string>
-	<string name="msg_err_empty">Enqueued list is empty</string>
 	<string name="msg_err_ejected">Media card ejected</string>
 	<string name="msg_err_notmounted">External storage not mounted</string>
 	<string name="msg_service_started">Player service started</string>

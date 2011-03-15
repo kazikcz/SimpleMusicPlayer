@@ -311,9 +311,6 @@ public class Player extends Service {
 						Toast.makeText(this, R.string.msg_err_io, Toast.LENGTH_LONG).show();
 					}
 				}
-				else {
-					Toast.makeText(this, R.string.msg_err_empty, Toast.LENGTH_SHORT).show();
-				}
 				break;
 
 			case IS_PLAYING:
