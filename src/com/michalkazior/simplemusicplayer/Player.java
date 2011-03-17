@@ -547,6 +547,13 @@ public class Player extends Service {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
+				sendState();
+			}
+		}, Request.GetState.getIntentFilter());
+
+		registerReceiver(new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
 				int index = intent.getIntExtra("index", -1);
 				enqueueSong((Song) intent.getParcelableExtra("song"), index);
 			}
