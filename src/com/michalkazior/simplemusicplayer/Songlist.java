@@ -29,11 +29,11 @@ import android.widget.ListView;
  * that contain all typed words.
  */
 public class Songlist extends Activity {
-	private ListView availableSongs;
-	private EditText filter;
+	private ListView availableSongsListView;
+	private EditText filterEditText;
 	private Song selectedSong;
-	private Song[] songs = {};
-	private ArrayList<Song> filtered = new ArrayList<Song>();
+	private Song[] allSongs = {};
+	private ArrayList<Song> filteredSongs = new ArrayList<Song>();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -46,11 +46,11 @@ public class Songlist extends Activity {
 
 		setContentView(R.layout.songlist);
 
-		availableSongs = (ListView) findViewById(R.id.playlistAvailableSongsListView);
-		filter = (EditText) findViewById(R.id.playlistFilterEditText);
+		availableSongsListView = (ListView) findViewById(R.id.playlistAvailableSongsListView);
+		filterEditText = (EditText) findViewById(R.id.playlistFilterEditText);
 
-		registerForContextMenu(availableSongs);
-		availableSongs.setOnItemClickListener(new OnItemClickListener() {
+		registerForContextMenu(availableSongsListView);
+		availableSongsListView.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				view.showContextMenu();
@@ -60,18 +60,18 @@ public class Songlist extends Activity {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				songs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
+				allSongs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
 				updateAvailableSongsListView();
 			}
 		}, Player.Remote.Reply.AvailableSongs.getIntentFilter());
 
-		filter.setOnKeyListener(new OnKeyListener() {
+		filterEditText.setOnKeyListener(new OnKeyListener() {
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
 				if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
 					updateAvailableSongsListView();
 					InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-					imm.hideSoftInputFromWindow(filter.getWindowToken(), 0);
+					imm.hideSoftInputFromWindow(filterEditText.getWindowToken(), 0);
 					return true;
 				}
 				return false;
@@ -88,19 +88,19 @@ public class Songlist extends Activity {
 	 * text box.
 	 */
 	private void updateAvailableSongsListView() {
-		filtered = new ArrayList<Song>();
-		String words[] = filter.getText().toString().toLowerCase().split(" ");
+		filteredSongs = new ArrayList<Song>();
+		String words[] = filterEditText.getText().toString().toLowerCase().split(" ");
 
-		for (Song song : songs) {
+		for (Song song : allSongs) {
 			String name = song.getPath().toLowerCase();
 			boolean matches = true;
 			for (String word : words) {
 				if (!name.contains(word)) matches = false;
 			}
-			if (matches) filtered.add(song);
+			if (matches) filteredSongs.add(song);
 		}
 
-		availableSongs.setAdapter(new SongAdapter(this, R.layout.listitem, filtered
+		availableSongsListView.setAdapter(new SongAdapter(this, R.layout.listitem, filteredSongs
 				.toArray(new Song[] {})));
 	}
 
@@ -110,7 +110,7 @@ public class Songlist extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						for (Song song : filtered) {
+						for (Song song : filteredSongs) {
 							sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
 									"song", song));
 						}
@@ -124,7 +124,7 @@ public class Songlist extends Activity {
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
 		AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-		selectedSong = (Song) availableSongs.getItemAtPosition(info.position);
+		selectedSong = (Song) availableSongsListView.getItemAtPosition(info.position);
 
 		menu.add(R.string.context_menu_play_now).setOnMenuItemClickListener(
 				new OnMenuItemClickListener() {

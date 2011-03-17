@@ -37,10 +37,10 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
  */
 public class Main extends Activity {
 	private Button playButton, skipButton;
-	private TextView songTime;
+	private TextView songTimeTextView;
 	private SeekBar songSeekBar;
-	private ListView enqueuedSongs;
-	private Song[] songs = {};
+	private ListView enqueuedSongsListView;
+	private Song[] enqueuedSongs = {};
 	private Player.State state = State.IS_STOPPED;
 	private Song selectedSong = null;
 	private boolean isEmpty = false;
@@ -66,9 +66,9 @@ public class Main extends Activity {
 
 		playButton = (Button) findViewById(R.id.playButton);
 		skipButton = (Button) findViewById(R.id.skipButton);
-		songTime = (TextView) findViewById(R.id.songTime);
+		songTimeTextView = (TextView) findViewById(R.id.songTime);
 		songSeekBar = (SeekBar) findViewById(R.id.songSeekBar);
-		enqueuedSongs = (ListView) findViewById(R.id.enqueuedSongs);
+		enqueuedSongsListView = (ListView) findViewById(R.id.enqueuedSongs);
 
 		playButton.setOnClickListener(new OnClickListener() {
 			@Override
@@ -118,8 +118,8 @@ public class Main extends Activity {
 			}
 		});
 
-		registerForContextMenu(enqueuedSongs);
-		enqueuedSongs.setOnItemClickListener(new OnItemClickListener() {
+		registerForContextMenu(enqueuedSongsListView);
+		enqueuedSongsListView.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				view.showContextMenu();
@@ -145,7 +145,7 @@ public class Main extends Activity {
 				 * playback which would not switch to 'no songs enqueued'
 				 * screen.
 				 */
-				if (songs.length == 0) return;
+				if (enqueuedSongs.length == 0) return;
 
 				int duration = intent.getIntExtra("duration", 0);
 				int position = intent.getIntExtra("position", 0);
@@ -160,7 +160,7 @@ public class Main extends Activity {
 					case IS_ON_HOLD_BY_CALL:
 					case IS_ON_HOLD_BY_HEADSET:
 					case IS_PAUSED:
-						songTime.setText(String.format("%d:%02d / %d:%02d (%d%%)",
+						songTimeTextView.setText(String.format("%d:%02d / %d:%02d (%d%%)",
 								(position / 1000) / 60, (position / 1000) % 60,
 								(duration / 1000) / 60, (duration / 1000) % 60,
 								Math.round(100 * position / duration)));
@@ -173,7 +173,7 @@ public class Main extends Activity {
 
 				switch (state) {
 					case IS_STOPPED:
-						songTime.setText("");
+						songTimeTextView.setText("");
 						break;
 					case IS_PLAYING:
 						playButton.setText(R.string.button_pause);
@@ -193,17 +193,18 @@ public class Main extends Activity {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				songs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
-				switch (songs.length) {
+				enqueuedSongs = Player.parcelableArrayToSongs(intent
+						.getParcelableArrayExtra("songs"));
+				switch (enqueuedSongs.length) {
 					case 0:
 						setupEmptyView();
 						break;
 					default:
 						setupContentView();
-						enqueuedSongs.setAdapter(new MainSongAdapter(
+						enqueuedSongsListView.setAdapter(new MainSongAdapter(
 								getApplicationContext(),
 								R.layout.listitem,
-								songs));
+								enqueuedSongs));
 						break;
 				}
 			}
@@ -220,13 +221,13 @@ public class Main extends Activity {
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
 		AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-		selectedSong = (Song) enqueuedSongs.getItemAtPosition(info.position);
+		selectedSong = (Song) enqueuedSongsListView.getItemAtPosition(info.position);
 
 		menu.add(R.string.context_menu_play_now).setOnMenuItemClickListener(
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						if (songs[0] != selectedSong) {
+						if (enqueuedSongs[0] != selectedSong) {
 							sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
 									"song", selectedSong));
 							sendBroadcast(Player.Remote.Request.EnqueueSong
@@ -315,7 +316,7 @@ public class Main extends Activity {
 											public void onClick(DialogInterface dialog, int which) {
 												sendBroadcast(Player.Remote.Request.Stop
 														.getIntent());
-												for (Song song : songs) {
+												for (Song song : enqueuedSongs) {
 													sendBroadcast(Player.Remote.Request.RemoveSong
 															.getIntent()
 															.putExtra("song", song));
@@ -341,7 +342,7 @@ public class Main extends Activity {
 											public void onClick(DialogInterface dialog, int which) {
 												sendBroadcast(Player.Remote.Request.Stop
 														.getIntent());
-												List<Song> songsNew = Arrays.asList(songs);
+												List<Song> songsNew = Arrays.asList(enqueuedSongs);
 												for (Song song : songsNew) {
 													sendBroadcast(Player.Remote.Request.RemoveSong
 															.getIntent()
