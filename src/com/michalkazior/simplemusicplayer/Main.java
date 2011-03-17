@@ -313,6 +313,8 @@ public class Main extends Activity {
 										new Dialog.OnClickListener() {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
+												sendBroadcast(Player.Remote.Request.Stop
+														.getIntent());
 												for (Song song : songs) {
 													sendBroadcast(Player.Remote.Request.RemoveSong
 															.getIntent()
@@ -337,6 +339,8 @@ public class Main extends Activity {
 										new Dialog.OnClickListener() {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
+												sendBroadcast(Player.Remote.Request.Stop
+														.getIntent());
 												List<Song> songsNew = Arrays.asList(songs);
 												for (Song song : songsNew) {
 													sendBroadcast(Player.Remote.Request.RemoveSong
