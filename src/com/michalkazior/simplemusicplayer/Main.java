@@ -376,9 +376,11 @@ public class Main extends Activity {
 					case IS_STOPPED:
 						songSeekBar.setMax(0);
 						songSeekBar.setProgress(0);
-						songTime.setText("");
 						break;
 					case IS_PLAYING:
+					case IS_ON_HOLD_BY_CALL:
+					case IS_ON_HOLD_BY_HEADSET:
+					case IS_PAUSED:
 						songTime.setText(String.format("%d:%02d / %d:%02d (%d%%)",
 								(position / 1000) / 60, (position / 1000) % 60,
 								(duration / 1000) / 60, (duration / 1000) % 60,
@@ -387,8 +389,18 @@ public class Main extends Activity {
 							songSeekBar.setMax(duration);
 							songSeekBar.setProgress(position);
 						}
+						break;
+				}
+
+				switch (state) {
+					case IS_STOPPED:
+						songTime.setText("");
+						break;
+					case IS_PLAYING:
 						playButton.setText(R.string.button_pause);
 						break;
+					case IS_ON_HOLD_BY_CALL:
+					case IS_ON_HOLD_BY_HEADSET:
 					case IS_PAUSED:
 						playButton.setText(R.string.button_play);
 						break;
