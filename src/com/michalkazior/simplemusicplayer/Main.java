@@ -358,10 +358,6 @@ public class Main extends Activity {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				int duration = intent.getIntExtra("duration", 0);
-				int position = intent.getIntExtra("position", 0);
-				state = (State) intent.getSerializableExtra("state");
-
 				/*
 				 * Avoid updating when we display 'no songs enqueued'. It will
 				 * get updated soon enough.
@@ -371,6 +367,10 @@ public class Main extends Activity {
 				 * screen.
 				 */
 				if (songs.length == 0) return;
+
+				int duration = intent.getIntExtra("duration", 0);
+				int position = intent.getIntExtra("position", 0);
+				state = (State) intent.getSerializableExtra("state");
 
 				switch (state) {
 					case IS_STOPPED:
