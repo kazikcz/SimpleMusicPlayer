@@ -1,23 +1,25 @@
 package com.michalkazior.simplemusicplayer;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import com.michalkazior.simplemusicplayer.Player.State;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.Menu;
+import android.view.ContextMenu;
 import android.view.MenuItem;
+import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
-import android.view.View.OnCreateContextMenuListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -49,231 +51,6 @@ public class Main extends Activity {
 	 * -1 means the user is not dragging the seekbar.
 	 */
 	private int oldSeekBarPosition = -1;
-
-	/**
-	 * Context menu for enqueued list items
-	 */
-	private enum ContextMenu {
-		PLAY_NOW {
-			@Override
-			public void call(Main m) {
-				if (m.songs.length > 0 && m.songs[0] != m.selectedSong) {
-					m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
-							m.selectedSong));
-					m.sendBroadcast(Player.Remote.Request.EnqueueSong
-							.getIntent()
-							.putExtra("song", m.selectedSong)
-							.putExtra("index", 0));
-				}
-			}
-
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_play_now;
-			}
-		},
-		PLAY_NEXT {
-			@Override
-			public void call(Main m) {
-				m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
-						m.selectedSong));
-				m.sendBroadcast(Player.Remote.Request.EnqueueSong
-						.getIntent()
-						.putExtra("song", m.selectedSong)
-						.putExtra("index", 1));
-			}
-
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_play_next;
-			}
-		},
-		REMOVE {
-			@Override
-			public void call(Main m) {
-				m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
-						m.selectedSong));
-			}
-
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_remove;
-			}
-		},
-		MOVE_UP {
-			@Override
-			public void call(Main m) {
-				m.sendBroadcast(Player.Remote.Request.MoveSong
-						.getIntent()
-						.putExtra("song", m.selectedSong)
-						.putExtra("offset", -1));
-			}
-
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_move_up;
-			}
-		},
-		MOVE_DOWN {
-			@Override
-			public void call(Main m) {
-				m.sendBroadcast(Player.Remote.Request.MoveSong
-						.getIntent()
-						.putExtra("song", m.selectedSong)
-						.putExtra("offset", 1));
-			}
-
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_move_down;
-			}
-		},
-		CLONE {
-			@Override
-			public void call(Main m) {
-				m.sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra("song",
-						m.selectedSong));
-			}
-
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_clone;
-			}
-		};
-		public abstract void call(Main m);
-
-		public abstract int getLabelId();
-
-		public static final void generate(Menu menu) {
-			for (ContextMenu item : ContextMenu.values()) {
-				menu.add(0, item.ordinal(), 0, item.getLabelId());
-			}
-		}
-
-		public static final void run(Main main, MenuItem item) {
-			values()[item.getItemId()].call(main);
-		}
-	};
-
-	/**
-	 * Option menu (pops up on Menu button press)
-	 */
-	private enum OptionMenu {
-		REMOVE_ALL {
-			@Override
-			public int getLabelId() {
-				return R.string.option_menu_remove_all;
-			}
-
-			@Override
-			public void call(Main m) {
-				new AlertDialog.Builder(m)
-						.setMessage(R.string.dialog_are_you_sure)
-						.setPositiveButton(R.string.dialog_yes, new DialogOk(m))
-						.setNegativeButton(R.string.dialog_no, null)
-						.show();
-			}
-
-			class DialogOk implements DialogInterface.OnClickListener {
-				private Main m;
-
-				public DialogOk(Main m) {
-					super();
-					this.m = m;
-				}
-
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					for (int i = 1; i < m.songs.length; ++i) {
-						m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
-								"song", m.songs[i]));
-					}
-				}
-			};
-		},
-		SHUFFLE {
-			@Override
-			public int getLabelId() {
-				return R.string.option_menu_shuffle;
-			}
-
-			@Override
-			public void call(Main m) {
-				new AlertDialog.Builder(m)
-						.setMessage(R.string.dialog_are_you_sure)
-						.setPositiveButton(R.string.dialog_yes, new DialogOk(m))
-						.setNegativeButton(R.string.dialog_no, null)
-						.show();
-			}
-
-			class DialogOk implements DialogInterface.OnClickListener {
-				private Main m;
-
-				public DialogOk(Main m) {
-					super();
-					this.m = m;
-				}
-
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					/*
-					 * Remove all songs, shuffle locally and then re-add.
-					 */
-					ArrayList<Song> songs = new ArrayList<Song>();
-
-					for (int i = 1; i < m.songs.length; ++i) {
-						m.sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
-								"song", m.songs[i]));
-						songs.add(m.songs[i]);
-					}
-
-					Collections.shuffle(songs);
-
-					for (Song song : songs) {
-						m.sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
-								"song", song));
-					}
-				}
-			};
-		},
-		ENQUEUE_NEW {
-			@Override
-			public int getLabelId() {
-				return R.string.option_menu_enqueue_new;
-			}
-
-			@Override
-			public void call(Main m) {
-				m.startActivity(new Intent(m, Songlist.class));
-			}
-		},
-		EXIT {
-			@Override
-			public int getLabelId() {
-				return R.string.option_menu_exit;
-			}
-
-			@Override
-			public void call(Main m) {
-				m.stopService(new Intent(m, Player.class));
-				m.finish();
-			}
-			
-		};
-		public abstract int getLabelId();
-
-		public abstract void call(Main m);
-
-		public static void generate(Menu menu) {
-			for (OptionMenu item : values()) {
-				menu.add(0, item.ordinal(), 0, item.getLabelId());
-			}
-		}
-
-		public static void run(Main main, MenuItem item) {
-			values()[item.getItemId()].call(main);
-		}
-	};
 
 	private synchronized void setupEmptyView() {
 		if (isEmpty) return;
@@ -346,16 +123,6 @@ public class Main extends Activity {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				view.showContextMenu();
-			}
-		});
-
-		enqueuedSongs.setOnCreateContextMenuListener(new OnCreateContextMenuListener() {
-			@Override
-			public void onCreateContextMenu(android.view.ContextMenu menu, View v,
-					ContextMenuInfo menuInfo) {
-				AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-				selectedSong = (Song) enqueuedSongs.getItemAtPosition(info.position);
-				ContextMenu.generate(menu);
 			}
 		});
 
@@ -451,21 +218,175 @@ public class Main extends Activity {
 	}
 
 	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		ContextMenu.run(this, item);
-		return super.onContextItemSelected(item);
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
+		selectedSong = (Song) enqueuedSongs.getItemAtPosition(info.position);
+
+		menu.add(R.string.context_menu_play_now).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						if (songs[0] != selectedSong) {
+							sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
+									"song", selectedSong));
+							sendBroadcast(Player.Remote.Request.EnqueueSong
+									.getIntent()
+									.putExtra("song", selectedSong)
+									.putExtra("index", 0));
+						}
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_play_next).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
+								selectedSong));
+						sendBroadcast(Player.Remote.Request.EnqueueSong
+								.getIntent()
+								.putExtra("song", selectedSong)
+								.putExtra("index", 1));
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_move_up).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.MoveSong
+								.getIntent()
+								.putExtra("song", selectedSong)
+								.putExtra("offset", -1));
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_move_down).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.MoveSong
+								.getIntent()
+								.putExtra("song", selectedSong)
+								.putExtra("offset", 1));
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_remove).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
+								selectedSong));
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_clone).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
+								"song", selectedSong));
+						return false;
+					}
+				});
+
+		super.onCreateContextMenu(menu, v, menuInfo);
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		OptionMenu.generate(menu);
+	public boolean onCreateOptionsMenu(android.view.Menu menu) {
+		menu.add(R.string.option_menu_remove_all).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						new AlertDialog.Builder(Main.this)
+								.setTitle(R.string.option_menu_remove_all)
+								.setMessage(R.string.dialog_are_you_sure)
+								.setNegativeButton(R.string.dialog_no, null)
+								.setPositiveButton(R.string.dialog_yes,
+										new Dialog.OnClickListener() {
+											@Override
+											public void onClick(DialogInterface dialog, int which) {
+												for (Song song : songs) {
+													sendBroadcast(Player.Remote.Request.RemoveSong
+															.getIntent()
+															.putExtra("song", song));
+												}
+											}
+										})
+								.show();
+						return false;
+					}
+				});
+
+		menu.add(R.string.option_menu_shuffle).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						new AlertDialog.Builder(Main.this)
+								.setTitle(R.string.option_menu_shuffle)
+								.setMessage(R.string.dialog_are_you_sure)
+								.setNegativeButton(R.string.dialog_no, null)
+								.setPositiveButton(R.string.dialog_yes,
+										new Dialog.OnClickListener() {
+											@Override
+											public void onClick(DialogInterface dialog, int which) {
+												List<Song> songsNew = Arrays.asList(songs);
+												for (Song song : songsNew) {
+													sendBroadcast(Player.Remote.Request.RemoveSong
+															.getIntent()
+															.putExtra("song", song));
+												}
+												Collections.shuffle(songsNew);
+												for (Song song : songsNew) {
+													sendBroadcast(Player.Remote.Request.EnqueueSong
+															.getIntent()
+															.putExtra("song", song));
+												}
+											}
+										})
+								.show();
+						return false;
+					}
+				});
+
+		menu.add(R.string.option_menu_enqueue_new).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						startActivity(new Intent(Main.this, Songlist.class));
+						return false;
+					}
+				});
+
+		menu.add(R.string.option_menu_exit).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						new AlertDialog.Builder(Main.this)
+								.setTitle(R.string.option_menu_exit)
+								.setMessage(R.string.dialog_are_you_sure)
+								.setNegativeButton(R.string.dialog_no, null)
+								.setPositiveButton(R.string.dialog_yes,
+										new Dialog.OnClickListener() {
+											@Override
+											public void onClick(DialogInterface dialog, int which) {
+												stopService(new Intent(Main.this, Player.class));
+												finish();
+											}
+										})
+								.show();
+						return false;
+					}
+				});
+
 		return super.onCreateOptionsMenu(menu);
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		OptionMenu.run(this, item);
-		return super.onOptionsItemSelected(item);
 	}
 
 	private class MainSongAdapter extends SongAdapter {

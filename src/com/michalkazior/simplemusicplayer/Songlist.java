@@ -7,12 +7,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.View.OnCreateContextMenuListener;
 import android.view.View.OnKeyListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView.AdapterContextMenuInfo;
@@ -34,98 +35,6 @@ public class Songlist extends Activity {
 	private Song[] songs = {};
 	private ArrayList<Song> filtered = new ArrayList<Song>();
 
-	/**
-	 * Context menu when long-pressing song
-	 */
-	private enum ContextMenu {
-		PLAY_NOW {
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_play_now;
-			}
-
-			@Override
-			public void call(Songlist s) {
-				s.sendBroadcast(Player.Remote.Request.EnqueueSong
-						.getIntent()
-						.putExtra("song", s.selectedSong)
-						.putExtra("index", 0));
-			}
-		},
-		PLAY_NEXT {
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_play_next;
-			}
-
-			@Override
-			public void call(Songlist s) {
-				s.sendBroadcast(Player.Remote.Request.EnqueueSong
-						.getIntent()
-						.putExtra("song", s.selectedSong)
-						.putExtra("index", 1));
-			}
-		},
-		ENQUEUE {
-			@Override
-			public int getLabelId() {
-				return R.string.context_menu_enqueue;
-			}
-
-			@Override
-			public void call(Songlist s) {
-				s.sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra("song",
-						s.selectedSong));
-			}
-		};
-		public abstract int getLabelId();
-
-		public abstract void call(Songlist s);
-
-		public static void generate(Menu menu) {
-			for (ContextMenu item : values()) {
-				menu.add(0, item.ordinal(), 0, item.getLabelId());
-			}
-		}
-
-		public static void run(Songlist s, MenuItem item) {
-			values()[item.getItemId()].call(s);
-		}
-	};
-
-	/**
-	 * Option menu when menu button is pressed
-	 */
-	private enum OptionMenu {
-		ENQUEUE_ALL {
-			@Override
-			public int getLabelId() {
-				return R.string.option_menu_enqueue_all;
-			}
-
-			@Override
-			public void call(Songlist s) {
-				for (Song song : s.filtered) {
-					s.sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra("song",
-							song));
-				}
-			}
-		};
-		public abstract int getLabelId();
-
-		public abstract void call(Songlist s);
-
-		public static void generate(Menu menu) {
-			for (OptionMenu item : values()) {
-				menu.add(0, item.ordinal(), 0, item.getLabelId());
-			}
-		}
-
-		public static void run(Songlist s, MenuItem item) {
-			values()[item.getItemId()].call(s);
-		}
-	};
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -145,16 +54,6 @@ public class Songlist extends Activity {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				view.showContextMenu();
-			}
-		});
-
-		availableSongs.setOnCreateContextMenuListener(new OnCreateContextMenuListener() {
-			@Override
-			public void onCreateContextMenu(android.view.ContextMenu menu, View v,
-					ContextMenuInfo menuInfo) {
-				AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
-				selectedSong = (Song) availableSongs.getItemAtPosition(info.position);
-				ContextMenu.generate(menu);
 			}
 		});
 
@@ -182,18 +81,6 @@ public class Songlist extends Activity {
 		sendBroadcast(Player.Remote.Request.GetAvailableSongs.getIntent());
 	}
 
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		OptionMenu.generate(menu);
-		return super.onCreateOptionsMenu(menu);
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		OptionMenu.run(this, item);
-		return super.onOptionsItemSelected(item);
-	}
-
 	/**
 	 * Updates the available songs list.
 	 * 
@@ -218,8 +105,61 @@ public class Songlist extends Activity {
 	}
 
 	@Override
-	public boolean onContextItemSelected(MenuItem item) {
-		ContextMenu.run(this, item);
-		return super.onContextItemSelected(item);
+	public boolean onCreateOptionsMenu(Menu menu) {
+		menu.add(R.string.option_menu_enqueue_all).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						for (Song song : filtered) {
+							sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
+									"song", song));
+						}
+						return false;
+					}
+				});
+
+		return super.onCreateOptionsMenu(menu);
+	}
+
+	@Override
+	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+		AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
+		selectedSong = (Song) availableSongs.getItemAtPosition(info.position);
+
+		menu.add(R.string.context_menu_play_now).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.EnqueueSong
+								.getIntent()
+								.putExtra("song", selectedSong)
+								.putExtra("index", 0));
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_play_next).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.EnqueueSong
+								.getIntent()
+								.putExtra("song", selectedSong)
+								.putExtra("index", 1));
+						return false;
+					}
+				});
+
+		menu.add(R.string.context_menu_enqueue).setOnMenuItemClickListener(
+				new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
+								"song", selectedSong));
+						return false;
+					}
+				});
+
+		super.onCreateContextMenu(menu, v, menuInfo);
 	}
 }
