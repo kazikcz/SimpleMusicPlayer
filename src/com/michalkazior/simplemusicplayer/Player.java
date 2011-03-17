@@ -107,6 +107,7 @@ public class Player extends Service {
 	private MediaPlayer mp = new MediaPlayer();
 	private State state = State.IS_STOPPED;
 	private Song nowPlaying = null;
+
 	/**
 	 * Timer is used to notify the UI about position updates.
 	 */
