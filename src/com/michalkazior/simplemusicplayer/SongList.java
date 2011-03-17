@@ -28,7 +28,7 @@ import android.widget.ListView;
  * The user may filter songs by a given phrase set. The filter matches songs
  * that contain all typed words.
  */
-public class Songlist extends Activity {
+public class SongList extends Activity {
 	private ListView availableSongsListView;
 	private EditText filterEditText;
 	private Song selectedSong;

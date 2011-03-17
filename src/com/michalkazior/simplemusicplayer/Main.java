@@ -365,7 +365,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						startActivity(new Intent(Main.this, Songlist.class));
+						startActivity(new Intent(Main.this, SongList.class));
 						return false;
 					}
 				});
