@@ -8,7 +8,8 @@
 	<string name="option_menu_enqueue_new">Enqueue</string>
 	<string name="option_menu_remove_all">Remove all</string>
 	<string name="option_menu_shuffle">Shuffle</string>
-	<string name="option_menu_enqueue_all">Enqueue all</string>
+    <string name="option_menu_enqueue_all">Enqueue all</string>
+    <string name="option_menu_exit">Exit</string>
 	<string name="activity_name_songlist">SimpleMusicPlayer Available songs</string>
 	<string name="activity_name_main">SimpleMusicPlayer</string>
 	<string name="service_name_player">SimpleMusicPlayer Service</string>

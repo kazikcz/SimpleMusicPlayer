@@ -41,7 +41,6 @@ public class Main extends Activity {
 	private Song[] songs = {};
 	private Player.State state = State.IS_STOPPED;
 	private Song selectedSong = null;
-	private boolean doNotStopService = false;
 	private boolean isEmpty = false;
 
 	/*
@@ -247,6 +246,19 @@ public class Main extends Activity {
 			public void call(Main m) {
 				m.startActivity(new Intent(m, Songlist.class));
 			}
+		},
+		EXIT {
+			@Override
+			public int getLabelId() {
+				return R.string.option_menu_exit;
+			}
+
+			@Override
+			public void call(Main m) {
+				m.stopService(new Intent(m, Player.class));
+				m.finish();
+			}
+			
 		};
 		public abstract int getLabelId();
 
@@ -445,24 +457,6 @@ public class Main extends Activity {
 	}
 
 	@Override
-	protected void onDestroy() {
-		/*
-		 * When the playback is stopped we destroy the backend service.
-		 * 
-		 * This means we'll lose enqueued songs list of course.
-		 */
-		switch (state) {
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
-			case IS_PAUSED:
-			case IS_STOPPED:
-				if (!doNotStopService) stopService(new Intent(this, Player.class));
-				break;
-		}
-		super.onDestroy();
-	}
-
-	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		OptionMenu.generate(menu);
 		return super.onCreateOptionsMenu(menu);
@@ -472,19 +466,6 @@ public class Main extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		OptionMenu.run(this, item);
 		return super.onOptionsItemSelected(item);
-	}
-
-	@Override
-	protected void onSaveInstanceState(Bundle outState) {
-		/*
-		 * If the user does not explicitly close (with the Back button) the UI,
-		 * we cannot kill the Service.
-		 * 
-		 * Without this the Player Service will be stopped when screen
-		 * orientation switch restarts the Main Activity.
-		 */
-		doNotStopService = true;
-		super.onSaveInstanceState(outState);
 	}
 
 	private class MainSongAdapter extends SongAdapter {
