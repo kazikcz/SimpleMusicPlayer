@@ -56,16 +56,18 @@ public class Player extends Service {
 		public enum Request {
 			GetAvailableSongs, GetEnqueuedSongs, GetState, EnqueueSong, MoveSong, RemoveSong, Play,
 			PlayNext, Stop, Seek;
+
 			public Intent getIntent() {
-				return new Intent(getIntentString());
+				return new Intent(toString());
 			}
 
 			public IntentFilter getIntentFilter() {
-				return new IntentFilter(getIntentString());
+				return new IntentFilter(toString());
 			}
 
-			public String getIntentString() {
-				return this.getClass().toString() + "." + this.toString();
+			@Override
+			public String toString() {
+				return this.getClass().toString() + "." + super.toString();
 			}
 		};
 
@@ -78,16 +80,18 @@ public class Player extends Service {
 		 */
 		public enum Reply {
 			AvailableSongs, EnqueuedSongs, State;
+
 			public Intent getIntent() {
-				return new Intent(getIntentString());
+				return new Intent(toString());
 			}
 
 			public IntentFilter getIntentFilter() {
-				return new IntentFilter(getIntentString());
+				return new IntentFilter(toString());
 			}
 
-			public String getIntentString() {
-				return this.getClass().toString() + "." + this.toString();
+			@Override
+			public String toString() {
+				return this.getClass().toString() + "." + super.toString();
 			}
 		};
 	};
