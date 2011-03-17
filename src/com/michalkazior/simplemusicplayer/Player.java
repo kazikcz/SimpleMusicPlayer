@@ -207,6 +207,7 @@ public class Player extends Service {
 						.getIntent()
 						.putExtra("duration", mp.getDuration())
 						.putExtra("position", mp.getCurrentPosition())
+						.putExtra("nowPlaying", nowPlaying)
 						.putExtra("state", state));
 				break;
 			case IS_STOPPED:
@@ -214,6 +215,7 @@ public class Player extends Service {
 						.getIntent()
 						.putExtra("duration", 0)
 						.putExtra("position", 0)
+						.putExtra("nowPlaying", nowPlaying)
 						.putExtra("state", state));
 				break;
 		}
@@ -222,19 +224,11 @@ public class Player extends Service {
 	/**
 	 * Enqueue a song at a given index.
 	 * 
-	 * The currently playing song will be stopped and shifted down if a song is
-	 * enqueued at index 0.
-	 * 
 	 * @param song
 	 * @param index
 	 *            value less than 0 appends
 	 */
 	public synchronized void enqueueSong(Song song, int index) {
-		/*
-		 * Spawn a copy, so the instance ID is different.
-		 */
-		song = song.spawn();
-
 		if (index >= 0) {
 			if (index > enqueuedSongs.size()) index = 0;
 			enqueuedSongs.add(index, song);
@@ -246,21 +240,20 @@ public class Player extends Service {
 		sendEnqueuedSongs();
 
 		/*
-		 * This makes the Player start playing when a first song is enqueued.
+		 * Start the playback after adding a first song.
 		 */
-		validate();
+		if (enqueuedSongs.size() == 1) {
+			play();
+		}
 	}
 
 	/**
 	 * Move a song by an offset.
 	 * 
-	 * Moving a nowPlaying (i.e. the first) song restarts playback with a new
-	 * song at index 0.
-	 * 
 	 * Moving an only song yields no effect.
 	 * 
-	 * Moving a song beyond enqueued songs list is done by cuting offset to list
-	 * size accordingly.
+	 * Moving a song beyond enqueued songs list is done by cutting offset to
+	 * list size accordingly.
 	 * 
 	 * @param song
 	 * @param offset
@@ -275,7 +268,6 @@ public class Player extends Service {
 		enqueuedSongs.add(index, song);
 
 		sendEnqueuedSongs();
-		validate();
 	}
 
 	/**
@@ -289,10 +281,13 @@ public class Player extends Service {
 	 * @param song
 	 */
 	public synchronized void removeSong(Song song) {
-		enqueuedSongs.remove(song);
-
-		sendEnqueuedSongs();
-		validate();
+		if (nowPlaying == song) {
+			playNext();
+		}
+		else {
+			enqueuedSongs.remove(song);
+			sendEnqueuedSongs();
+		}
 	}
 
 	/**
@@ -303,9 +298,9 @@ public class Player extends Service {
 	public synchronized void play() {
 		switch (state) {
 			case IS_STOPPED:
-				if (enqueuedSongs.size() > 0) {
+				validate();
+				if (nowPlaying != null) {
 					try {
-						nowPlaying = enqueuedSongs.get(0);
 						mp.setDataSource(nowPlaying.getPath());
 						mp.prepare();
 						mp.start();
@@ -333,15 +328,24 @@ public class Player extends Service {
 	}
 
 	/**
-	 * Play song at index 1 (i.e. the second) while removing the first.
+	 * Remove the currently playing song and play the next one.
 	 * 
 	 * This call is valid in any state.
 	 */
 	public synchronized void playNext() {
-		if (enqueuedSongs.size() > 0) {
-			enqueuedSongs.remove(0);
+		if (nowPlaying != null) {
+			int idx = enqueuedSongs.indexOf(nowPlaying);
+			enqueuedSongs.remove(nowPlaying);
 			sendEnqueuedSongs();
 			reset();
+
+			/*
+			 * Idx now point to the next song (since the previous nowPlaying has
+			 * been removed thus shifting array items).
+			 */
+			if (idx < enqueuedSongs.size()) {
+				nowPlaying = enqueuedSongs.get(idx);
+			}
 			play();
 		}
 	}
@@ -411,10 +415,8 @@ public class Player extends Service {
 			reset();
 		}
 		else {
-			Song first = enqueuedSongs.get(0);
-			if (first != nowPlaying) {
-				reset();
-				play();
+			if (nowPlaying == null) {
+				nowPlaying = enqueuedSongs.get(0);
 			}
 		}
 	}
@@ -559,8 +561,17 @@ public class Player extends Service {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				int index = intent.getIntExtra("index", -1);
-				enqueueSong((Song) intent.getParcelableExtra("song"), index);
+				Song song = intent.getParcelableExtra("song");
+				int index = -1;
+
+				if (intent.hasExtra("index")) {
+					index = intent.getIntExtra("index", -1);
+				}
+				else if (intent.hasExtra("afterPlaying")) {
+					index = enqueuedSongs.indexOf(nowPlaying) + 1;
+				}
+
+				enqueueSong(song, index);
 			}
 		}, Request.EnqueueSong.getIntentFilter());
 
@@ -588,7 +599,14 @@ public class Player extends Service {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				play();
+				if (intent.hasExtra("song")) {
+					reset();
+					nowPlaying = intent.getParcelableExtra("song");
+					play();
+				}
+				else {
+					play();
+				}
 			}
 		}, Request.Play.getIntentFilter());
 

@@ -42,6 +42,7 @@ public class Main extends Activity {
 	private ListView enqueuedSongsListView;
 	private Song[] enqueuedSongs = {};
 	private Player.State state = State.IS_STOPPED;
+	private Song nowPlaying = null;
 	private Song selectedSong = null;
 	private boolean isEmpty = false;
 
@@ -69,6 +70,8 @@ public class Main extends Activity {
 		songTimeTextView = (TextView) findViewById(R.id.songTime);
 		songSeekBar = (SeekBar) findViewById(R.id.songSeekBar);
 		enqueuedSongsListView = (ListView) findViewById(R.id.enqueuedSongs);
+
+		enqueuedSongsListView.setAdapter(new MainSongAdapter(this, enqueuedSongs));
 
 		playButton.setOnClickListener(new OnClickListener() {
 			@Override
@@ -149,7 +152,12 @@ public class Main extends Activity {
 
 				int duration = intent.getIntExtra("duration", 0);
 				int position = intent.getIntExtra("position", 0);
+				Song newNowPlaying = intent.getParcelableExtra("nowPlaying");
 				state = (State) intent.getSerializableExtra("state");
+				if (!Song.equals(nowPlaying, newNowPlaying)) {
+					nowPlaying = newNowPlaying;
+					enqueuedSongsListView.invalidateViews();
+				}
 
 				switch (state) {
 					case IS_STOPPED:
@@ -201,10 +209,7 @@ public class Main extends Activity {
 						break;
 					default:
 						setupContentView();
-						enqueuedSongsListView.setAdapter(new MainSongAdapter(
-								getApplicationContext(),
-								R.layout.listitem,
-								enqueuedSongs));
+						((MainSongAdapter) enqueuedSongsListView.getAdapter()).setItems(enqueuedSongs);
 						break;
 				}
 			}
@@ -227,14 +232,9 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						if (enqueuedSongs[0] != selectedSong) {
-							sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra(
-									"song", selectedSong));
-							sendBroadcast(Player.Remote.Request.EnqueueSong
-									.getIntent()
-									.putExtra("song", selectedSong)
-									.putExtra("index", 0));
-						}
+						sendBroadcast(Player.Remote.Request.Play.getIntent().putExtra("song",
+								selectedSong));
+						selectedSong = null;
 						return false;
 					}
 				});
@@ -248,7 +248,7 @@ public class Main extends Activity {
 						sendBroadcast(Player.Remote.Request.EnqueueSong
 								.getIntent()
 								.putExtra("song", selectedSong)
-								.putExtra("index", 1));
+								.putExtra("afterPlaying", true));
 						return false;
 					}
 				});
@@ -292,7 +292,7 @@ public class Main extends Activity {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
 						sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
-								"song", selectedSong));
+								"song", selectedSong.spawn()));
 						return false;
 					}
 				});
@@ -395,18 +395,22 @@ public class Main extends Activity {
 	}
 
 	private class MainSongAdapter extends SongAdapter {
-		public MainSongAdapter(Context context, int textViewResourceId, Song[] objects) {
-			super(context, textViewResourceId, objects);
+		public MainSongAdapter(Context context, Song[] songs) {
+			super(context, songs);
 		}
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View v = super.getView(position, convertView, parent);
 			if (v != null) {
-				if (position == 0) v.setBackgroundDrawable(getResources().getDrawable(
-						R.drawable.listitem_selector_first));
-				else v.setBackgroundDrawable(getResources().getDrawable(
-						R.drawable.listitem_selector));
+				if (Song.equals(nowPlaying, enqueuedSongs[position])) {
+					v.setBackgroundDrawable(getResources().getDrawable(
+							R.drawable.listitem_selector_first));
+				}
+				else {
+					v.setBackgroundDrawable(getResources()
+							.getDrawable(R.drawable.listitem_selector));
+				}
 			}
 			return v;
 		}

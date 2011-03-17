@@ -9,14 +9,19 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-public class SongAdapter extends ArrayAdapter<Song> {
+public class SongAdapter extends android.widget.BaseAdapter {
 	private Song[] songs;
 	private LayoutInflater li;
 
-	public SongAdapter(Context context, int textViewResourceId, Song[] objects) {
-		super(context, textViewResourceId, objects);
-		songs = objects;
-		li = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+	public SongAdapter(Context context, Song[] songs) {
+		super();
+		this.songs = songs;
+		this.li = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+	}
+
+	public void setItems(Song[] songs) {
+		this.songs = songs;
+		notifyDataSetChanged();
 	}
 
 	@Override
@@ -34,5 +39,20 @@ public class SongAdapter extends ArrayAdapter<Song> {
 			tv2.setText(f.getParent());
 		}
 		return v;
+	}
+
+	@Override
+	public int getCount() {
+		return songs.length;
+	}
+
+	@Override
+	public Object getItem(int position) {
+		return songs[position];
+	}
+
+	@Override
+	public long getItemId(int position) {
+		return songs[position].getId();
 	}
 }

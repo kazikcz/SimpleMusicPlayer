@@ -79,4 +79,8 @@ public class Song implements Parcelable {
 	public boolean equals(Object o) {
 		return (o instanceof Song) && ((Song) o).id == this.id;
 	}
+
+	public static boolean equals(Song a, Song b) {
+		return a != null && b != null && a.getId() == b.getId();
+	}
 }

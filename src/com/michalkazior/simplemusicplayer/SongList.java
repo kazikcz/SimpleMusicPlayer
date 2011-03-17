@@ -100,7 +100,7 @@ public class SongList extends Activity {
 			if (matches) filteredSongs.add(song);
 		}
 
-		availableSongsListView.setAdapter(new SongAdapter(this, R.layout.listitem, filteredSongs
+		availableSongsListView.setAdapter(new SongAdapter(this, filteredSongs
 				.toArray(new Song[] {})));
 	}
 
@@ -112,7 +112,7 @@ public class SongList extends Activity {
 					public boolean onMenuItemClick(MenuItem item) {
 						for (Song song : filteredSongs) {
 							sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
-									"song", song));
+									"song", song.spawn()));
 						}
 						return false;
 					}
@@ -130,10 +130,12 @@ public class SongList extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
+						Song song = selectedSong.spawn();
 						sendBroadcast(Player.Remote.Request.EnqueueSong
 								.getIntent()
-								.putExtra("song", selectedSong)
+								.putExtra("song", song)
 								.putExtra("index", 0));
+						sendBroadcast(Player.Remote.Request.Play.getIntent().putExtra("song", song));
 						return false;
 					}
 				});
@@ -144,8 +146,8 @@ public class SongList extends Activity {
 					public boolean onMenuItemClick(MenuItem item) {
 						sendBroadcast(Player.Remote.Request.EnqueueSong
 								.getIntent()
-								.putExtra("song", selectedSong)
-								.putExtra("index", 1));
+								.putExtra("song", selectedSong.spawn())
+								.putExtra("afterPlaying", true));
 						return false;
 					}
 				});
