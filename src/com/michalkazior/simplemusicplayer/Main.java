@@ -45,13 +45,7 @@ public class Main extends Activity {
 	private Song nowPlaying = null;
 	private Song selectedSong = null;
 	private boolean isEmpty = false;
-
-	/*
-	 * Position of the seekbar before user started draging.
-	 * 
-	 * -1 means the user is not dragging the seekbar.
-	 */
-	private int oldSeekBarPosition = -1;
+	private boolean isDraggingSeekBar = false;
 
 	private synchronized void setupEmptyView() {
 		if (isEmpty) return;
@@ -103,20 +97,21 @@ public class Main extends Activity {
 
 			@Override
 			public void onStopTrackingTouch(SeekBar seekBar) {
-				oldSeekBarPosition = -1;
+				isDraggingSeekBar = false;
 				sendBroadcast(Player.Remote.Request.Seek.getIntent().putExtra("position",
 						lastProgress));
 			}
 
 			@Override
 			public void onStartTrackingTouch(SeekBar seekBar) {
-				oldSeekBarPosition = seekBar.getProgress();
+				isDraggingSeekBar = true;
 			}
 
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 				if (fromUser) {
 					lastProgress = progress;
+					updatePosition(progress, -1);
 				}
 			}
 		});
@@ -130,6 +125,28 @@ public class Main extends Activity {
 		});
 
 		isEmpty = false;
+	}
+
+	/**
+	 * Update visually song position.
+	 * 
+	 * Updates the seekBar and songText.
+	 * 
+	 * @param position
+	 * @param duration
+	 */
+	private void updatePosition(int position, int duration) {
+		if (duration == -1) duration = songSeekBar.getMax();
+		if (duration > 0) {
+			songTimeTextView.setText(String.format("%d:%02d / %d:%02d (%d%%)",
+					(position / 1000) / 60, (position / 1000) % 60, (duration / 1000) / 60,
+					(duration / 1000) % 60, Math.round(100 * position / duration)));
+		}
+		else {
+			songTimeTextView.setText("");
+		}
+		songSeekBar.setMax(duration);
+		songSeekBar.setProgress(position);
 	}
 
 	@Override
@@ -161,21 +178,13 @@ public class Main extends Activity {
 
 				switch (state) {
 					case IS_STOPPED:
-						songSeekBar.setMax(0);
-						songSeekBar.setProgress(0);
+						updatePosition(0, 0);
 						break;
 					case IS_PLAYING:
 					case IS_ON_HOLD_BY_CALL:
 					case IS_ON_HOLD_BY_HEADSET:
 					case IS_PAUSED:
-						songTimeTextView.setText(String.format("%d:%02d / %d:%02d (%d%%)",
-								(position / 1000) / 60, (position / 1000) % 60,
-								(duration / 1000) / 60, (duration / 1000) % 60,
-								Math.round(100 * position / duration)));
-						if (oldSeekBarPosition == -1) {
-							songSeekBar.setMax(duration);
-							songSeekBar.setProgress(position);
-						}
+						if (!isDraggingSeekBar) updatePosition(position, duration);
 						break;
 				}
 
