@@ -3,6 +3,8 @@ package com.michalkazior.simplemusicplayer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.michalkazior.simplemusicplayer.Player.State;
 
@@ -46,6 +48,51 @@ public class Main extends Activity {
 	private Song selectedSong = null;
 	private boolean isEmpty = false;
 	private boolean isDraggingSeekBar = false;
+	private int songDuration = 0;
+	private int seekZoomBegin = 0;
+	private int seekZoomLength = 0;
+	private Timer seekZoomTimer = new Timer();
+
+	private void seekZoomTimerStart() {
+		seekZoomTimerStop();
+
+		seekZoomTimer.schedule(new TimerTask() {
+			@Override
+			public void run() {
+				int position = Main.this.songSeekBar.getProgress();
+				int duration = Main.this.songSeekBar.getMax();
+				int start = position - (duration / 4);
+				int length = duration / 2;
+
+				if (start < 0) start = 0;
+				if (start + length > duration) length = duration - start;
+
+				seekZoomBegin += start;
+				seekZoomLength = length;
+
+				Main.this.runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						updatePosition(seekZoomLength / 2, seekZoomLength);
+					}
+				});
+
+				seekZoomTimerStart();
+			}
+		}, 1000);
+	}
+
+	private void seekZoomTimerStop() {
+		seekZoomTimer.cancel();
+		seekZoomTimer.purge();
+		seekZoomTimer = new Timer();
+	}
+
+	private void seekZoomReset() {
+		seekZoomTimerStop();
+		seekZoomBegin = 0;
+		seekZoomLength = 0;
+	}
 
 	private synchronized void setupEmptyView() {
 		if (isEmpty) return;
@@ -99,12 +146,14 @@ public class Main extends Activity {
 			public void onStopTrackingTouch(SeekBar seekBar) {
 				isDraggingSeekBar = false;
 				sendBroadcast(Player.Remote.Request.Seek.getIntent().putExtra("position",
-						lastProgress));
+						Main.this.seekZoomBegin + lastProgress));
+				seekZoomReset();
 			}
 
 			@Override
 			public void onStartTrackingTouch(SeekBar seekBar) {
 				isDraggingSeekBar = true;
+				seekZoomTimerStart();
 			}
 
 			@Override
@@ -112,6 +161,7 @@ public class Main extends Activity {
 				if (fromUser) {
 					lastProgress = progress;
 					updatePosition(progress, -1);
+					seekZoomTimerStart();
 				}
 			}
 		});
@@ -137,10 +187,22 @@ public class Main extends Activity {
 	 */
 	private void updatePosition(int position, int duration) {
 		if (duration == -1) duration = songSeekBar.getMax();
+
 		if (duration > 0) {
-			songTimeTextView.setText(String.format("%d:%02d / %d:%02d (%d%%)",
-					(position / 1000) / 60, (position / 1000) % 60, (duration / 1000) / 60,
-					(duration / 1000) % 60, Math.round(100 * position / duration)));
+			String seekZoomText = "";
+			int start = position + seekZoomBegin;
+
+			if (seekZoomLength != 0) {
+				seekZoomText = String.format("[%d:%02d - %d:%02d]", (seekZoomBegin / 1000) / 60,
+						(seekZoomBegin / 1000) % 60,
+						((seekZoomBegin + seekZoomLength) / 1000) / 60,
+						((seekZoomBegin + seekZoomLength) / 1000) % 60);
+			}
+
+			songTimeTextView.setText(String.format("%d:%02d / %d:%02d (%d%%)%s",
+					(start / 1000) / 60, (start / 1000) % 60, (songDuration / 1000) / 60,
+					(songDuration / 1000) % 60, Math.round(100 * start / songDuration),
+					seekZoomText));
 		}
 		else {
 			songTimeTextView.setText("");
@@ -171,6 +233,7 @@ public class Main extends Activity {
 				int position = intent.getIntExtra("position", 0);
 				Song newNowPlaying = intent.getParcelableExtra("nowPlaying");
 				state = (State) intent.getSerializableExtra("state");
+				songDuration = duration;
 				if (!Song.equals(nowPlaying, newNowPlaying)) {
 					nowPlaying = newNowPlaying;
 					enqueuedSongsListView.invalidateViews();
