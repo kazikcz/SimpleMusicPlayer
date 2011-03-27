@@ -121,6 +121,8 @@ public class Main extends Activity {
 					case IS_PLAYING:
 						sendBroadcast(Player.Remote.Request.Stop.getIntent());
 						break;
+					case IS_ON_HOLD_BY_CALL:
+					case IS_ON_HOLD_BY_HEADSET:
 					case IS_STOPPED:
 					case IS_PAUSED:
 						sendBroadcast(Player.Remote.Request.Play.getIntent());
