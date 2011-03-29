@@ -51,7 +51,7 @@ public class Player extends Service {
 	};
 
 	private ArrayList<Song> enqueuedSongs = new ArrayList<Song>();
-	private MediaPlayer mp = new MediaPlayer();
+	private MediaPlayer mp = null;
 	private State state = State.IS_STOPPED;
 	private Song playing = null;
 	private ArrayList<Messenger> clients = new ArrayList<Messenger>();
@@ -247,6 +247,13 @@ public class Player extends Service {
 				validate();
 				if (playing != null) {
 					try {
+						mp = new MediaPlayer();
+						mp.setOnCompletionListener(new OnCompletionListener() {
+							@Override
+							public void onCompletion(MediaPlayer mp) {
+								playNext();
+							}
+						});
 						mp.setDataSource(playing.getPath());
 						mp.prepare();
 						mp.start();
@@ -341,6 +348,8 @@ public class Player extends Service {
 			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				mp.reset();
+				mp.release();
+				mp = null;
 				playing = null;
 				setState(State.IS_STOPPED);
 				break;
@@ -396,16 +405,6 @@ public class Player extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-
-		/*
-		 * When a song playback has ended, play a next one.
-		 */
-		mp.setOnCompletionListener(new OnCompletionListener() {
-			@Override
-			public void onCompletion(MediaPlayer mp) {
-				playNext();
-			}
-		});
 
 		/*
 		 * Handle incomming and outcomming calls.
