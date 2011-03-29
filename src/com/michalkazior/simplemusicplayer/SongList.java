@@ -1,12 +1,16 @@
 package com.michalkazior.simplemusicplayer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -35,9 +39,26 @@ public class SongList extends Activity {
 	private Song[] allSongs = {};
 	private ArrayList<Song> filteredSongs = new ArrayList<Song>();
 
+	private Player player = null;
+	private ServiceConnection playerConnection = new ServiceConnection() {
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			player = null;
+		}
+
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			player = ((Player.Proxy) service).getPlayer();
+			allSongs = player.getAllSongs();
+			updateAvailableSongsListView();
+		}
+	};
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		bindService(new Intent(SongList.this, Player.class), playerConnection, BIND_AUTO_CREATE);
 
 		if (!Player.isExternalStorageMounted()) {
 			setContentView(R.layout.songlist_notmounted);
@@ -57,14 +78,6 @@ public class SongList extends Activity {
 			}
 		});
 
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				allSongs = Player.parcelableArrayToSongs(intent.getParcelableArrayExtra("songs"));
-				updateAvailableSongsListView();
-			}
-		}, Player.Remote.Reply.AvailableSongs.getIntentFilter());
-
 		filterEditText.setOnKeyListener(new OnKeyListener() {
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -77,8 +90,6 @@ public class SongList extends Activity {
 				return false;
 			}
 		});
-
-		sendBroadcast(Player.Remote.Request.GetAvailableSongs.getIntent());
 	}
 
 	/**
@@ -111,8 +122,7 @@ public class SongList extends Activity {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
 						for (Song song : filteredSongs) {
-							sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
-									"song", song.spawn()));
+							player.enqueueSong(song.spawn(), -1);
 						}
 						return false;
 					}
@@ -131,11 +141,10 @@ public class SongList extends Activity {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
 						Song song = selectedSong.spawn();
-						sendBroadcast(Player.Remote.Request.EnqueueSong
-								.getIntent()
-								.putExtra("song", song)
-								.putExtra("index", 0));
-						sendBroadcast(Player.Remote.Request.Play.getIntent().putExtra("song", song));
+						player.reset();
+						player.enqueueSong(song, 0);
+						player.setPlaying(song);
+						player.play();
 						return false;
 					}
 				});
@@ -144,10 +153,8 @@ public class SongList extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.EnqueueSong
-								.getIntent()
-								.putExtra("song", selectedSong.spawn())
-								.putExtra("afterPlaying", true));
+						player.enqueueSong(selectedSong.spawn(),
+								Arrays.asList(player.getEnqueuedSongs()).indexOf(player.getPlaying()) + 1);
 						return false;
 					}
 				});
@@ -156,8 +163,7 @@ public class SongList extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
-								"song", selectedSong));
+						player.enqueueSong(selectedSong.spawn(), -1);
 						return false;
 					}
 				});

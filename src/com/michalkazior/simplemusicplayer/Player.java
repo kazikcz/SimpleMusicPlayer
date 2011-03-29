@@ -2,11 +2,6 @@ package com.michalkazior.simplemusicplayer;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import com.michalkazior.simplemusicplayer.Player.Remote.Reply;
-import com.michalkazior.simplemusicplayer.Player.Remote.Request;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -18,8 +13,11 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.IBinder;
-import android.os.Parcelable;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.telephony.TelephonyManager;
 import android.widget.Toast;
@@ -29,71 +27,20 @@ import android.widget.Toast;
  * 
  * It manages the playlist, handles operations, sends events to UI client(s).
  * 
- * The communication between Player and other Activities is handles via
- * broadcasting and catching Intents.
- * 
- * The Intents are constructed as follows:
- * 
- * <pre>
- *    com.michalkazior.simplemusicplayer.Player.Remote.Request.GetState
- *    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- *          package namespace            ^^^^^^^^^^^^^^
- *                                           class     ^^^^^^^^
- *                                           prefix      intent ^^^^^^^
- *                                                        type   method
- * </pre>
- * 
  * @author kazik
  */
 public class Player extends Service {
+	enum Event {
+		EnqueuedSongsChanged, StateChanged,
+	};
+
 	/**
-	 * Remote interface to Player class.
+	 * Proxy Binder class for direct remote communication with Player class.
 	 */
-	public static class Remote {
-		/**
-		 * Request are handled asynchronously.
-		 */
-		public enum Request {
-			GetAvailableSongs, GetEnqueuedSongs, GetState, EnqueueSong, MoveSong, RemoveSong, Play,
-			PlayNext, Stop, Seek;
-
-			public Intent getIntent() {
-				return new Intent(toString());
-			}
-
-			public IntentFilter getIntentFilter() {
-				return new IntentFilter(toString());
-			}
-
-			@Override
-			public String toString() {
-				return this.getClass().toString() + "." + super.toString();
-			}
-		};
-
-		/**
-		 * Replies may be spurious, i.e. without requesting them first.
-		 * 
-		 * This is the case especially with 'state'. Other may be induced
-		 * indirectly, e.g. 'enqueuedSongs' when removing a song from enqueued
-		 * songs list.
-		 */
-		public enum Reply {
-			AvailableSongs, EnqueuedSongs, State;
-
-			public Intent getIntent() {
-				return new Intent(toString());
-			}
-
-			public IntentFilter getIntentFilter() {
-				return new IntentFilter(toString());
-			}
-
-			@Override
-			public String toString() {
-				return this.getClass().toString() + "." + super.toString();
-			}
-		};
+	public class Proxy extends Binder {
+		Player getPlayer() {
+			return Player.this;
+		}
 	};
 
 	/**
@@ -106,119 +53,119 @@ public class Player extends Service {
 	private ArrayList<Song> enqueuedSongs = new ArrayList<Song>();
 	private MediaPlayer mp = new MediaPlayer();
 	private State state = State.IS_STOPPED;
-	private Song nowPlaying = null;
-
-	/**
-	 * Timer is used to notify the UI about position updates.
-	 */
-	private Timer timer = null;
-
-	/**
-	 * Make sure the timer is running.
-	 * 
-	 * May be called multiple number of times.
-	 */
-	private void startTimer() {
-		if (timer == null) {
-			timer = new Timer();
-			timer.schedule(new TimerTask() {
-				@Override
-				public void run() {
-					sendState();
-				}
-			}, 0, 1000);
-		}
-	}
-
-	/**
-	 * Make sure the timer is stopped.
-	 * 
-	 * May be called multiple number of times.
-	 */
-	private void stopTimer() {
-		if (timer != null) {
-			timer.cancel();
-			timer = null;
-			sendState();
-		}
-	}
+	private Song playing = null;
+	private ArrayList<Messenger> clients = new ArrayList<Messenger>();
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		return null;
+		return new Proxy();
+	}
+
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		return START_STICKY;
+	}
+
+	public synchronized void registerHandler(Messenger m) {
+		clients.add(m);
+	}
+
+	public synchronized Song getPlaying() {
+		return playing;
+	}
+
+	public synchronized void setPlaying(Song song) {
+		playing = song;
+	}
+
+	public synchronized State getState() {
+		return state;
+	}
+
+	private synchronized void setState(State s) {
+		state  = s;
+		emit(Event.StateChanged);
 	}
 
 	/**
-	 * Broadcast Reply.availableSongs
-	 * 
-	 * The Intent contains:
-	 * 
-	 * <pre>
-	 *  - songs (Song [])
-	 * </pre>
+	 * Get current song duration in msecs.
 	 */
-	public void sendAvailableSongs() {
-		sendBroadcast(Reply.AvailableSongs.getIntent().putExtra("songs", getSongsAvailable()));
-	}
-
-	/**
-	 * Broadcast Reply.enqueuedSongs
-	 * 
-	 * The Intent contains:
-	 * 
-	 * <pre>
-	 *  - songs (Song [])
-	 * </pre>
-	 */
-	public synchronized void sendEnqueuedSongs() {
-		sendBroadcast(Reply.EnqueuedSongs.getIntent().putExtra("songs",
-				enqueuedSongs.toArray(new Song[] {})));
-	}
-
-	/**
-	 * Broadcast Reply.state
-	 * 
-	 * The Intent contains:
-	 * 
-	 * <pre>
-	 *  - duration in msec (int)
-	 *  - position in msec (int)
-	 *  - state (Player.State)
-	 * </pre>
-	 */
-	public synchronized void sendState() {
-		/*
-		 * Fix spurious MediaPlayer.OnCompletion
-		 * 
-		 * It seems calling getDuration/getCurrentPosition in between the
-		 * reset() and prepare()/start() combo is introducing spurious and
-		 * unwanted stream completion event.
-		 * 
-		 * It is assumed that when the MediaPlayer instance is stopped/reseted
-		 * it sets its duration and/or position to the same value (possibly 0?)
-		 * and that triggers the completion event.
-		 */
+	public synchronized int getDuration() {
 		switch (state) {
 			case IS_ON_HOLD_BY_CALL:
 			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PLAYING:
 			case IS_PAUSED:
-				sendBroadcast(Reply.State
-						.getIntent()
-						.putExtra("duration", mp.getDuration())
-						.putExtra("position", mp.getCurrentPosition())
-						.putExtra("nowPlaying", nowPlaying)
-						.putExtra("state", state));
-				break;
+				return mp.getDuration();
 			case IS_STOPPED:
-				sendBroadcast(Reply.State
-						.getIntent()
-						.putExtra("duration", 0)
-						.putExtra("position", 0)
-						.putExtra("nowPlaying", nowPlaying)
-						.putExtra("state", state));
-				break;
+				return 0;
 		}
+		return 0;
+	}
+
+	/**
+	 * Get current song position in msecs.
+	 */
+	public synchronized int getPosition() {
+		switch (state) {
+			case IS_ON_HOLD_BY_CALL:
+			case IS_ON_HOLD_BY_HEADSET:
+			case IS_PLAYING:
+			case IS_PAUSED:
+				return mp.getCurrentPosition();
+			case IS_STOPPED:
+				return 0;
+		}
+		return 0;
+	}
+
+	/**
+	 * Get a list for currently enqueued songs.
+	 * 
+	 * @return
+	 */
+	public synchronized Song[] getEnqueuedSongs() {
+		return enqueuedSongs.toArray(new Song[] {});
+	}
+
+	/**
+	 * Get a list of all available songs.
+	 * 
+	 * 
+	 * The function returns a list of songs stored in the media database from an
+	 * external storage (i.e. memory card).
+	 */
+	public synchronized Song[] getAllSongs() {
+		/*
+		 * Doing a query() would result in a fatal error when external storage
+		 * is missing.
+		 * 
+		 * So instead, return an empty list when external storage isn't present.
+		 */
+		if (!isExternalStorageMounted()) {
+			Toast.makeText(this, R.string.msg_err_notmounted, Toast.LENGTH_LONG).show();
+			return new Song[] {};
+		}
+
+		/*
+		 * Fixme: Should a Song have more info?
+		 */
+		ArrayList<Song> list = new ArrayList<Song>();
+		Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+		String[] columns = { MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DISPLAY_NAME };
+		Cursor c = getContentResolver().query(uri, columns, null, null,
+				MediaStore.Audio.Media.DATA + " ASC");
+
+		int dataIndex = c.getColumnIndex(MediaStore.Audio.Media.DATA);
+		int displayIndex = c.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME);
+
+		c.moveToFirst();
+		do {
+			list.add(new Song(c.getString(dataIndex), c.getString(displayIndex)));
+		} while (c.moveToNext());
+		c.close();
+
+		return list.toArray(new Song[] {});
 	}
 
 	/**
@@ -237,7 +184,7 @@ public class Player extends Service {
 			enqueuedSongs.add(song);
 		}
 
-		sendEnqueuedSongs();
+		emit(Event.EnqueuedSongsChanged);
 
 		/*
 		 * Start the playback after adding a first song.
@@ -266,8 +213,7 @@ public class Player extends Service {
 
 		enqueuedSongs.remove(song);
 		enqueuedSongs.add(index, song);
-
-		sendEnqueuedSongs();
+		emit(Event.EnqueuedSongsChanged);
 	}
 
 	/**
@@ -281,12 +227,12 @@ public class Player extends Service {
 	 * @param song
 	 */
 	public synchronized void removeSong(Song song) {
-		if (nowPlaying == song) {
+		if (playing == song) {
 			playNext();
 		}
 		else {
 			enqueuedSongs.remove(song);
-			sendEnqueuedSongs();
+			emit(Event.EnqueuedSongsChanged);
 		}
 	}
 
@@ -299,13 +245,12 @@ public class Player extends Service {
 		switch (state) {
 			case IS_STOPPED:
 				validate();
-				if (nowPlaying != null) {
+				if (playing != null) {
 					try {
-						mp.setDataSource(nowPlaying.getPath());
+						mp.setDataSource(playing.getPath());
 						mp.prepare();
 						mp.start();
-						state = State.IS_PLAYING;
-						startTimer();
+						setState(State.IS_PLAYING);
 					}
 					catch (IOException e) {
 						Toast.makeText(this, R.string.msg_err_io, Toast.LENGTH_LONG).show();
@@ -321,8 +266,7 @@ public class Player extends Service {
 			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				mp.start();
-				state = State.IS_PLAYING;
-				startTimer();
+				setState(State.IS_PLAYING);
 				break;
 		}
 	}
@@ -333,10 +277,10 @@ public class Player extends Service {
 	 * This call is valid in any state.
 	 */
 	public synchronized void playNext() {
-		if (nowPlaying != null) {
-			int idx = enqueuedSongs.indexOf(nowPlaying);
-			enqueuedSongs.remove(nowPlaying);
-			sendEnqueuedSongs();
+		if (playing != null) {
+			int idx = enqueuedSongs.indexOf(playing);
+			enqueuedSongs.remove(playing);
+			emit(Event.EnqueuedSongsChanged);
 			reset();
 
 			/*
@@ -344,7 +288,7 @@ public class Player extends Service {
 			 * been removed thus shifting array items).
 			 */
 			if (idx < enqueuedSongs.size()) {
-				nowPlaying = enqueuedSongs.get(idx);
+				playing = enqueuedSongs.get(idx);
 			}
 			play();
 		}
@@ -359,8 +303,7 @@ public class Player extends Service {
 		switch (state) {
 			case IS_PLAYING:
 				mp.pause();
-				state = State.IS_PAUSED;
-				stopTimer();
+				setState(State.IS_PAUSED);
 				break;
 		}
 	}
@@ -398,9 +341,8 @@ public class Player extends Service {
 			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				mp.reset();
-				nowPlaying = null;
-				state = State.IS_STOPPED;
-				stopTimer();
+				playing = null;
+				setState(State.IS_STOPPED);
 				break;
 		}
 	}
@@ -415,8 +357,8 @@ public class Player extends Service {
 			reset();
 		}
 		else {
-			if (nowPlaying == null) {
-				nowPlaying = enqueuedSongs.get(0);
+			if (playing == null) {
+				playing = enqueuedSongs.get(0);
 			}
 		}
 	}
@@ -433,7 +375,7 @@ public class Player extends Service {
 		switch (state) {
 			case IS_PLAYING:
 				stop();
-				state = reason;
+				setState(reason);
 		}
 	}
 
@@ -470,8 +412,7 @@ public class Player extends Service {
 		 * 
 		 * When the playback is on and there's an incomming call, or an outgoing
 		 * is being dialed we want to hold the playback. Finishing the call will
-		 * resume the playback only if the previous reason for holding was a
-		 * call.
+		 * resume the playback.
 		 */
 		registerReceiver(new BroadcastReceiver() {
 			@Override
@@ -490,15 +431,15 @@ public class Player extends Service {
 		 * Handle (un)plugging a headset
 		 * 
 		 * When the playback is on and a connected headset is unplugged we want
-		 * to hold the playback. Plugging back a headset will resume the
-		 * playback only if the previous reason for holding was an unplugging.
+		 * to hold the playback. Plugging back a headset back will resume the
+		 * playback.
 		 * 
 		 * The AudioManager.ACTION_AUDIO_BECOMING_NOISY is for unplugging only
 		 * and reacts instantenously.
 		 * 
 		 * The Intent.ACTION_HEADSET_PLUG has a hardcoded polling time (in the
 		 * Android framework) and would lag for about 1s before stopping. The
-		 * lag is acceptable when plugging in.
+		 * lag is acceptable when plugging in though.
 		 */
 		registerReceiver(new BroadcastReceiver() {
 			@Override
@@ -520,6 +461,7 @@ public class Player extends Service {
 				hold(State.IS_ON_HOLD_BY_HEADSET);
 			}
 		}, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+
 		/*
 		 * Handle external storage removal
 		 */
@@ -534,103 +476,6 @@ public class Player extends Service {
 			}
 		}, new IntentFilter(Intent.ACTION_MEDIA_EJECT));
 
-		/*
-		 * Register request handling.
-		 */
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				sendAvailableSongs();
-			}
-		}, Request.GetAvailableSongs.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				sendEnqueuedSongs();
-			}
-		}, Request.GetEnqueuedSongs.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				sendState();
-			}
-		}, Request.GetState.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				Song song = intent.getParcelableExtra("song");
-				int index = -1;
-
-				if (intent.hasExtra("index")) {
-					index = intent.getIntExtra("index", -1);
-				}
-				else if (intent.hasExtra("afterPlaying")) {
-					index = enqueuedSongs.indexOf(nowPlaying) + 1;
-				}
-
-				enqueueSong(song, index);
-			}
-		}, Request.EnqueueSong.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				moveSong((Song) intent.getParcelableExtra("song"), intent.getIntExtra("offset", 0));
-			}
-		}, Request.MoveSong.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				removeSong((Song) intent.getParcelableExtra("song"));
-			}
-		}, Request.RemoveSong.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				sendState();
-			}
-		}, Request.Stop.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				if (intent.hasExtra("song")) {
-					reset();
-					nowPlaying = intent.getParcelableExtra("song");
-					play();
-				}
-				else {
-					play();
-				}
-			}
-		}, Request.Play.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				playNext();
-			}
-		}, Request.PlayNext.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				stop();
-			}
-		}, Request.Stop.getIntentFilter());
-
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				seek(intent.getIntExtra("position", 0));
-			}
-		}, Request.Seek.getIntentFilter());
-
 		Toast.makeText(this, R.string.msg_service_started, Toast.LENGTH_SHORT).show();
 	}
 
@@ -642,66 +487,27 @@ public class Player extends Service {
 	}
 
 	/**
+	 * Emit a signal that is propagated to listening clients.
+	 * 
+	 * @param e
+	 */
+	private void emit(Event e) {
+		for (Messenger m : clients) {
+			try {
+				m.send(Message.obtain(null, e.ordinal()));
+			}
+			catch (RemoteException exception) {
+				/* The client must've died */
+				clients.remove(m);
+			}
+		}
+	}
+
+	/**
 	 * Check whether external storage is mounted or not.
 	 */
 	public static boolean isExternalStorageMounted() {
 		return android.os.Environment.getExternalStorageState().compareTo(
 				android.os.Environment.MEDIA_MOUNTED) == 0;
-	}
-
-	/**
-	 * Get a list of available songs.
-	 * 
-	 * The function returns a list of songs stored in the media database from an
-	 * external storage (i.e. memory card).
-	 * 
-	 * @return
-	 */
-	public Song[] getSongsAvailable() {
-		/*
-		 * Doing a query() would result in a fatal error when external storage
-		 * is missing.
-		 * 
-		 * So instead, return an empty list when external storage isn't present.
-		 */
-		if (!isExternalStorageMounted()) {
-			Toast.makeText(this, R.string.msg_err_notmounted, Toast.LENGTH_LONG).show();
-			return new Song[] {};
-		}
-
-		/*
-		 * Fixme: Should a Song have more info?
-		 */
-		ArrayList<Song> list = new ArrayList<Song>();
-		Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-		String[] columns = { MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DISPLAY_NAME };
-		Cursor c = getContentResolver().query(uri, columns, null, null,
-				MediaStore.Audio.Media.DATA + " ASC");
-
-		int dataIndex = c.getColumnIndex(MediaStore.Audio.Media.DATA);
-		int displayIndex = c.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME);
-
-		c.moveToFirst();
-		do {
-			list.add(new Song(c.getString(dataIndex), c.getString(displayIndex)));
-		} while (c.moveToNext());
-		c.close();
-
-		return list.toArray(new Song[] {});
-	}
-
-	/**
-	 * Cast a Parcellable[] to Song[].
-	 * 
-	 * We need to explicitly cast each object when unpacking a Parcellable[].
-	 * 
-	 * @return
-	 */
-	public static Song[] parcelableArrayToSongs(Parcelable[] list) {
-		Song[] songs = new Song[list.length];
-		for (int i = 0; i < list.length; i++) {
-			songs[i] = (Song) list[i];
-		}
-		return songs;
 	}
 }

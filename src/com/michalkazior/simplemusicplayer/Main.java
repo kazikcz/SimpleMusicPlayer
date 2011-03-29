@@ -11,11 +11,16 @@ import com.michalkazior.simplemusicplayer.Player.State;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
 import android.view.ContextMenu;
 import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
@@ -42,16 +47,138 @@ public class Main extends Activity {
 	private TextView songTimeTextView;
 	private SeekBar songSeekBar;
 	private ListView enqueuedSongsListView;
-	private Song[] enqueuedSongs = {};
-	private Player.State state = State.IS_STOPPED;
-	private Song nowPlaying = null;
+
 	private Song selectedSong = null;
 	private boolean isEmpty = false;
+
 	private boolean isDraggingSeekBar = false;
-	private int songDuration = 0;
 	private int seekZoomBegin = 0;
 	private int seekZoomLength = 0;
 	private Timer seekZoomTimer = new Timer();
+	private Timer updateTimer = null;
+
+	private Player player = null;
+	private ServiceConnection playerConnection = new ServiceConnection() {
+		@Override
+		public void onServiceDisconnected(ComponentName name) {
+			player = null;
+		}
+
+		@Override
+		public void onServiceConnected(ComponentName name, IBinder service) {
+			player = ((Player.Proxy) service).getPlayer();
+			player.registerHandler(playerMessenger);
+			updateEnqueuedSongs();
+			updatePlaying();
+		}
+	};
+
+	private Messenger playerMessenger = new Messenger(new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (Player.Event.values()[msg.what]) {
+				case EnqueuedSongsChanged:
+					updateEnqueuedSongs();
+					break;
+
+				case StateChanged:
+					enqueuedSongsListView.invalidateViews();
+					updatePlaying();
+					break;
+			}
+		}
+	});
+
+	private void updateEnqueuedSongs() {
+		/*
+		 * Avoid updating when we display 'no songs enqueued'. It will get
+		 * updated soon enough.
+		 * 
+		 * Also avoiding setupEmptyView() here fixes the case of end of playback
+		 * which would not switch to 'no songs enqueued' screen.
+		 */
+		if (player.getEnqueuedSongs().length == 0) {
+			setupEmptyView();
+			return;
+		}
+
+		setupContentView();
+		((MainSongAdapter) enqueuedSongsListView.getAdapter()).setItems(player.getEnqueuedSongs());
+	}
+
+	private void updateTimerStart() {
+		if (updateTimer != null) return;
+
+		updateTimer = new Timer();
+		updateTimer.schedule(new TimerTask() {
+			@Override
+			public void run() {
+				Main.this.runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						updatePlaying();
+					}
+				});
+			}
+		}, 1000, 1000);
+	}
+
+	private void updateTimerStop() {
+		if (updateTimer == null) return;
+
+		updateTimer.cancel();
+		updateTimer.purge();
+		updateTimer = null;
+	}
+
+	private void updatePlaying() {
+		if (isEmpty) {
+			updateTimerStop();
+			return;
+		}
+
+		int duration = player.getDuration();
+		int position = player.getPosition();
+		State state = player.getState();
+
+		switch (state) {
+			case IS_PLAYING:
+				updateTimerStart();
+				break;
+			case IS_STOPPED:
+			case IS_ON_HOLD_BY_CALL:
+			case IS_ON_HOLD_BY_HEADSET:
+			case IS_PAUSED:
+				updateTimerStop();
+				break;
+		}
+
+		switch (state) {
+			case IS_STOPPED:
+				updatePosition(0, 0);
+				break;
+			case IS_PLAYING:
+			case IS_ON_HOLD_BY_CALL:
+			case IS_ON_HOLD_BY_HEADSET:
+			case IS_PAUSED:
+				if (!isDraggingSeekBar) updatePosition(position, duration);
+				break;
+		}
+
+		switch (state) {
+			case IS_STOPPED:
+				songTimeTextView.setText("");
+				break;
+			case IS_PLAYING:
+				playButton.setText(R.string.button_pause);
+				break;
+			case IS_ON_HOLD_BY_CALL:
+			case IS_ON_HOLD_BY_HEADSET:
+			case IS_PAUSED:
+				playButton.setText(R.string.button_play);
+				break;
+		}
+	}
 
 	private void seekZoomTimerStart() {
 		seekZoomTimerStop();
@@ -112,20 +239,20 @@ public class Main extends Activity {
 		songSeekBar = (SeekBar) findViewById(R.id.songSeekBar);
 		enqueuedSongsListView = (ListView) findViewById(R.id.enqueuedSongs);
 
-		enqueuedSongsListView.setAdapter(new MainSongAdapter(this, enqueuedSongs));
+		enqueuedSongsListView.setAdapter(new MainSongAdapter(this, player.getEnqueuedSongs()));
 
 		playButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				switch (state) {
+				switch (Main.this.player.getState()) {
 					case IS_PLAYING:
-						sendBroadcast(Player.Remote.Request.Stop.getIntent());
+						Main.this.player.stop();
 						break;
 					case IS_ON_HOLD_BY_CALL:
 					case IS_ON_HOLD_BY_HEADSET:
 					case IS_STOPPED:
 					case IS_PAUSED:
-						sendBroadcast(Player.Remote.Request.Play.getIntent());
+						Main.this.player.play();
 						break;
 				}
 			}
@@ -134,7 +261,7 @@ public class Main extends Activity {
 		skipButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				sendBroadcast(Player.Remote.Request.PlayNext.getIntent());
+				Main.this.player.playNext();
 			}
 		});
 
@@ -147,8 +274,7 @@ public class Main extends Activity {
 			@Override
 			public void onStopTrackingTouch(SeekBar seekBar) {
 				isDraggingSeekBar = false;
-				sendBroadcast(Player.Remote.Request.Seek.getIntent().putExtra("position",
-						Main.this.seekZoomBegin + lastProgress));
+				player.seek(Main.this.seekZoomBegin + lastProgress);
 				seekZoomReset();
 			}
 
@@ -193,6 +319,7 @@ public class Main extends Activity {
 		if (duration > 0) {
 			String seekZoomText = "";
 			int start = position + seekZoomBegin;
+			int songDuration = player.getDuration();
 
 			if (seekZoomLength != 0) {
 				seekZoomText = String.format("[%d:%02d - %d:%02d]", (seekZoomBegin / 1000) / 60,
@@ -218,83 +345,8 @@ public class Main extends Activity {
 		super.onCreate(savedInstanceState);
 		setupEmptyView();
 
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				/*
-				 * Avoid updating when we display 'no songs enqueued'. It will
-				 * get updated soon enough.
-				 * 
-				 * Also avoiding setupEmptyView() here fixes the case of end of
-				 * playback which would not switch to 'no songs enqueued'
-				 * screen.
-				 */
-				if (enqueuedSongs.length == 0) return;
-
-				int duration = intent.getIntExtra("duration", 0);
-				int position = intent.getIntExtra("position", 0);
-				Song newNowPlaying = intent.getParcelableExtra("nowPlaying");
-				state = (State) intent.getSerializableExtra("state");
-				songDuration = duration;
-				if (!Song.equals(nowPlaying, newNowPlaying)) {
-					nowPlaying = newNowPlaying;
-					enqueuedSongsListView.invalidateViews();
-				}
-
-				switch (state) {
-					case IS_STOPPED:
-						updatePosition(0, 0);
-						break;
-					case IS_PLAYING:
-					case IS_ON_HOLD_BY_CALL:
-					case IS_ON_HOLD_BY_HEADSET:
-					case IS_PAUSED:
-						if (!isDraggingSeekBar) updatePosition(position, duration);
-						break;
-				}
-
-				switch (state) {
-					case IS_STOPPED:
-						songTimeTextView.setText("");
-						break;
-					case IS_PLAYING:
-						playButton.setText(R.string.button_pause);
-						break;
-					case IS_ON_HOLD_BY_CALL:
-					case IS_ON_HOLD_BY_HEADSET:
-					case IS_PAUSED:
-						playButton.setText(R.string.button_play);
-						break;
-				}
-			}
-		}, Player.Remote.Reply.State.getIntentFilter());
-
-		/*
-		 * Update enqueued songs listview upon Reply.EnqueuedSongs
-		 */
-		registerReceiver(new BroadcastReceiver() {
-			@Override
-			public void onReceive(Context context, Intent intent) {
-				enqueuedSongs = Player.parcelableArrayToSongs(intent
-						.getParcelableArrayExtra("songs"));
-				switch (enqueuedSongs.length) {
-					case 0:
-						setupEmptyView();
-						break;
-					default:
-						setupContentView();
-						((MainSongAdapter) enqueuedSongsListView.getAdapter()).setItems(enqueuedSongs);
-						break;
-				}
-			}
-		}, Player.Remote.Reply.EnqueuedSongs.getIntentFilter());
-
-		/*
-		 * If the service isn't running yet, the broadcast will be ignored.
-		 */
-		sendBroadcast(Player.Remote.Request.GetEnqueuedSongs.getIntent());
-		sendBroadcast(Player.Remote.Request.GetState.getIntent());
-		startService(new Intent(this, Player.class));
+		startService(new Intent(Main.this, Player.class));
+		bindService(new Intent(Main.this, Player.class), playerConnection, 0);
 	}
 
 	@Override
@@ -306,9 +358,9 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.Play.getIntent().putExtra("song",
-								selectedSong));
-						selectedSong = null;
+						player.reset();
+						player.setPlaying(selectedSong);
+						player.play();
 						return false;
 					}
 				});
@@ -317,12 +369,10 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
-								selectedSong));
-						sendBroadcast(Player.Remote.Request.EnqueueSong
-								.getIntent()
-								.putExtra("song", selectedSong)
-								.putExtra("afterPlaying", true));
+						player.removeSong(selectedSong);
+						player.enqueueSong(selectedSong, Arrays
+								.asList(player.getEnqueuedSongs())
+								.indexOf(player.getPlaying()) + 1);
 						return false;
 					}
 				});
@@ -331,10 +381,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.MoveSong
-								.getIntent()
-								.putExtra("song", selectedSong)
-								.putExtra("offset", -1));
+						player.moveSong(selectedSong, -1);
 						return false;
 					}
 				});
@@ -343,10 +390,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.MoveSong
-								.getIntent()
-								.putExtra("song", selectedSong)
-								.putExtra("offset", 1));
+						player.moveSong(selectedSong, 1);
 						return false;
 					}
 				});
@@ -355,8 +399,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.RemoveSong.getIntent().putExtra("song",
-								selectedSong));
+						player.removeSong(selectedSong);
 						return false;
 					}
 				});
@@ -365,8 +408,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						sendBroadcast(Player.Remote.Request.EnqueueSong.getIntent().putExtra(
-								"song", selectedSong.spawn()));
+						player.enqueueSong(selectedSong.spawn(), -1);
 						return false;
 					}
 				});
@@ -388,12 +430,9 @@ public class Main extends Activity {
 										new Dialog.OnClickListener() {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
-												sendBroadcast(Player.Remote.Request.Stop
-														.getIntent());
-												for (Song song : enqueuedSongs) {
-													sendBroadcast(Player.Remote.Request.RemoveSong
-															.getIntent()
-															.putExtra("song", song));
+												player.stop();
+												for (Song song : player.getEnqueuedSongs()) {
+													player.removeSong(song);
 												}
 											}
 										})
@@ -414,19 +453,16 @@ public class Main extends Activity {
 										new Dialog.OnClickListener() {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
-												sendBroadcast(Player.Remote.Request.Stop
-														.getIntent());
-												List<Song> songsNew = Arrays.asList(enqueuedSongs);
+												player.stop();
+
+												List<Song> songsNew = Arrays.asList(player
+														.getEnqueuedSongs());
 												for (Song song : songsNew) {
-													sendBroadcast(Player.Remote.Request.RemoveSong
-															.getIntent()
-															.putExtra("song", song));
+													player.removeSong(song);
 												}
 												Collections.shuffle(songsNew);
 												for (Song song : songsNew) {
-													sendBroadcast(Player.Remote.Request.EnqueueSong
-															.getIntent()
-															.putExtra("song", song));
+													player.enqueueSong(song, -1);
 												}
 											}
 										})
@@ -456,6 +492,7 @@ public class Main extends Activity {
 										new Dialog.OnClickListener() {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
+												unbindService(playerConnection);
 												stopService(new Intent(Main.this, Player.class));
 												finish();
 											}
@@ -477,7 +514,7 @@ public class Main extends Activity {
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View v = super.getView(position, convertView, parent);
 			if (v != null) {
-				if (Song.equals(nowPlaying, enqueuedSongs[position])) {
+				if (Song.equals(player.getPlaying(), player.getEnqueuedSongs()[position])) {
 					v.setBackgroundDrawable(getResources().getDrawable(
 							R.drawable.listitem_selector_first));
 				}
