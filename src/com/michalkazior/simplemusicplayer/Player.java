@@ -3,6 +3,9 @@ package com.michalkazior.simplemusicplayer;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -12,6 +15,7 @@ import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
+import android.media.MediaPlayer.OnErrorListener;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
@@ -83,7 +87,7 @@ public class Player extends Service {
 	}
 
 	private synchronized void setState(State s) {
-		state  = s;
+		state = s;
 		emit(Event.StateChanged);
 	}
 
@@ -254,13 +258,30 @@ public class Player extends Service {
 								playNext();
 							}
 						});
+						mp.setOnErrorListener(new OnErrorListener() {
+							@Override
+							public boolean onError(MediaPlayer mp, int what, int extra) {
+								Toast.makeText(getApplicationContext(), R.string.msg_mp_error,
+										Toast.LENGTH_LONG).show();
+								mp.reset();
+								mp.release();
+								setState(State.IS_STOPPED);
+								return false;
+							}
+						});
 						mp.setDataSource(playing.getPath());
 						mp.prepare();
 						mp.start();
 						setState(State.IS_PLAYING);
 					}
-					catch (IOException e) {
-						Toast.makeText(this, R.string.msg_err_io, Toast.LENGTH_LONG).show();
+					catch (Exception e) {
+						Toast.makeText(
+								this,
+								String.format(getText(R.string.msg_mp_error_info).toString(),
+										e.getMessage()), Toast.LENGTH_LONG).show();
+						mp.reset();
+						mp.release();
+						setState(State.IS_STOPPED);
 					}
 				}
 				break;
@@ -406,6 +427,14 @@ public class Player extends Service {
 	public void onCreate() {
 		super.onCreate();
 
+		Notification n = new Notification(
+				R.drawable.icon,
+				getText(R.string.msg_service_started),
+				System.currentTimeMillis());
+		PendingIntent i = PendingIntent.getActivity(this, 0, new Intent(this, Main.class), 0);
+		n.setLatestEventInfo(this, getText(R.string.app_name), "", i);
+		startForeground(this.hashCode(), n);
+
 		/*
 		 * Handle incomming and outcomming calls.
 		 * 
@@ -480,8 +509,9 @@ public class Player extends Service {
 
 	@Override
 	public void onDestroy() {
+		stopForeground(true);
+		Toast.makeText(this, R.string.msg_service_stopped, Toast.LENGTH_LONG).show();
 		reset();
-		Toast.makeText(this, R.string.msg_service_stopped, Toast.LENGTH_SHORT).show();
 		super.onDestroy();
 	}
 

@@ -36,6 +36,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.Toast;
 
 /**
  * Main activity.
@@ -514,7 +515,9 @@ public class Main extends Activity {
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View v = super.getView(position, convertView, parent);
 			if (v != null) {
-				if (Song.equals(player.getPlaying(), player.getEnqueuedSongs()[position])) {
+				Song[] songs = player.getEnqueuedSongs();
+				
+				if (position < songs.length && Song.equals(player.getPlaying(), songs[position])) {
 					v.setBackgroundDrawable(getResources().getDrawable(
 							R.drawable.listitem_selector_first));
 				}

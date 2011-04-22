@@ -8,8 +8,8 @@
 	<string name="option_menu_enqueue_new">Enqueue</string>
 	<string name="option_menu_remove_all">Remove all</string>
 	<string name="option_menu_shuffle">Shuffle</string>
-    <string name="option_menu_enqueue_all">Enqueue all</string>
-    <string name="option_menu_exit">Exit</string>
+	<string name="option_menu_enqueue_all">Enqueue all</string>
+	<string name="option_menu_exit">Exit</string>
 	<string name="activity_name_songlist">SimpleMusicPlayer Available songs</string>
 	<string name="activity_name_main">SimpleMusicPlayer</string>
 	<string name="service_name_player">SimpleMusicPlayer Service</string>
@@ -20,12 +20,14 @@
 	<string name="context_menu_move_up">Move up</string>
 	<string name="context_menu_move_down">Move down</string>
 	<string name="context_menu_clone">Clone</string>
-	<string name="msg_err_io">I/O error</string>
 	<string name="msg_err_ejected">Media card ejected</string>
 	<string name="msg_err_notmounted">External storage not mounted</string>
 	<string name="msg_service_started">Player service started</string>
 	<string name="msg_service_stopped">Player service stopped</string>
 	<string name="msg_queue_empty">No songs enqueued</string>
+	<string name="msg_mp_error">MediaPlayer error - unsupported song codec?
+	</string>
+	<string name="msg_mp_error_info">MediaPlayer error - %s</string>
 	<string name="dialog_are_you_sure">Are you sure?</string>
 	<string name="dialog_yes">Yes</string>
 	<string name="dialog_no">No</string>
