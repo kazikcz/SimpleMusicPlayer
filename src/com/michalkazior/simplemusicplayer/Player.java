@@ -163,10 +163,11 @@ public class Player extends Service {
 		int dataIndex = c.getColumnIndex(MediaStore.Audio.Media.DATA);
 		int displayIndex = c.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME);
 
-		c.moveToFirst();
-		do {
-			list.add(new Song(c.getString(dataIndex), c.getString(displayIndex)));
-		} while (c.moveToNext());
+		if (c.moveToFirst()) {
+			do {
+				list.add(new Song(c.getString(dataIndex), c.getString(displayIndex)));
+			} while (c.moveToNext());
+		}
 		c.close();
 
 		return list.toArray(new Song[] {});
