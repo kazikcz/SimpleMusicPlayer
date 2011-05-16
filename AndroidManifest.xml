@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	package="com.michalkazior.simplemusicplayer" android:versionCode="4"
-	android:versionName="1.2.1">
+	android:versionName="1.3.0">
 	<uses-sdk android:minSdkVersion="7" android:targetSdkVersion="8"></uses-sdk>
 	<uses-permission android:name="android.permission.READ_PHONE_STATE"></uses-permission>
 
