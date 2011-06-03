@@ -37,8 +37,9 @@ public class SongList extends Activity {
 	private Song selectedSong;
 	private Song[] allSongs = {};
 	private ArrayList<Song> filteredSongs = new ArrayList<Song>();
-
 	private Player player = null;
+	public static Activity INSTANCE = null;
+
 	private ServiceConnection playerConnection = new ServiceConnection() {
 		@Override
 		public void onServiceDisconnected(ComponentName name) {
@@ -89,6 +90,14 @@ public class SongList extends Activity {
 				return false;
 			}
 		});
+
+		INSTANCE = this;
+	}
+
+	@Override
+	protected void onDestroy() {
+		INSTANCE = null;
+		super.onDestroy();
 	}
 
 	/**
@@ -176,5 +185,11 @@ public class SongList extends Activity {
 				});
 
 		super.onCreateContextMenu(menu, v, menuInfo);
+	}
+
+	@Override
+	public void onBackPressed() {
+		startActivity(new Intent(this, SongQueue.class)
+				.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
 	}
 }

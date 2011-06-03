@@ -479,7 +479,8 @@ public class SongQueue extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						startActivity(new Intent(SongQueue.this, SongList.class));
+						startActivity(new Intent(SongQueue.this, SongList.class)
+								.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
 						return false;
 					}
 				});
@@ -496,6 +497,8 @@ public class SongQueue extends Activity {
 										new Dialog.OnClickListener() {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
+												if (SongList.INSTANCE != null)
+													SongList.INSTANCE.finish();
 												unbindService(playerConnection);
 												stopService(new Intent(SongQueue.this, Player.class));
 												finish();
@@ -509,6 +512,11 @@ public class SongQueue extends Activity {
 		return super.onCreateOptionsMenu(menu);
 	}
 
+	@Override
+	public void onBackPressed() {
+		moveTaskToBack(true);
+	}
+
 	private class MainSongAdapter extends SongAdapter {
 		public MainSongAdapter(Context context, Song[] songs) {
 			super(context, songs);
@@ -519,7 +527,7 @@ public class SongQueue extends Activity {
 			View v = super.getView(position, convertView, parent);
 			if (v != null) {
 				Song[] songs = player.getEnqueuedSongs();
-				
+
 				if (position < songs.length && Song.equals(player.getPlaying(), songs[position])) {
 					v.setBackgroundDrawable(getResources().getDrawable(
 							R.drawable.listitem_selector_first));
