@@ -432,7 +432,9 @@ public class Player extends Service {
 				R.drawable.icon,
 				getText(R.string.msg_service_started),
 				System.currentTimeMillis());
-		PendingIntent i = PendingIntent.getActivity(this, 0, new Intent(this, SongQueue.class), 0);
+		PendingIntent i = PendingIntent.getActivity(this, 0, new Intent(this, SongQueue.class)
+				.setAction("android.intent.action.MAIN")
+				.addCategory("android.intent.category.LAUNCHER"), 0);
 		n.setLatestEventInfo(this, getText(R.string.app_name), "", i);
 		startForeground(this.hashCode(), n);
 
