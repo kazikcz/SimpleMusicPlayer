@@ -464,6 +464,10 @@ public class SongQueue extends Activity {
 												for (Song song : songsNew) {
 													player.enqueueSong(song, -1);
 												}
+												if (songsNew.size() > 0) {
+													player.setPlaying(songsNew.get(0));
+													player.play();
+												}
 											}
 										})
 								.show();

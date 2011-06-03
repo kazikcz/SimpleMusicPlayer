@@ -120,9 +120,12 @@ public class SongList extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
+						boolean autoplay = player.getEnqueuedSongs().length == 0; 
 						for (Song song : filteredSongs) {
 							player.enqueueSong(song.spawn(), -1);
 						}
+						if (autoplay)
+							player.play();
 						return false;
 					}
 				});
@@ -152,8 +155,11 @@ public class SongList extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
+						boolean autoplay = player.getEnqueuedSongs().length == 0; 
 						player.enqueueSong(selectedSong.spawn(),
 								Arrays.asList(player.getEnqueuedSongs()).indexOf(player.getPlaying()) + 1);
+						if (autoplay)
+							player.play();
 						return false;
 					}
 				});
@@ -162,7 +168,10 @@ public class SongList extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
+						boolean autoplay = player.getEnqueuedSongs().length == 0; 
 						player.enqueueSong(selectedSong.spawn(), -1);
+						if (autoplay)
+							player.play();
 						return false;
 					}
 				});

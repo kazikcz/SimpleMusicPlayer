@@ -188,13 +188,6 @@ public class Player extends Service {
 		}
 
 		emit(Event.EnqueuedSongsChanged);
-
-		/*
-		 * Start the playback after adding a first song.
-		 */
-		if (enqueuedSongs.size() == 1) {
-			play();
-		}
 	}
 
 	/**
@@ -305,6 +298,7 @@ public class Player extends Service {
 	 */
 	public synchronized void playNext() {
 		if (playing != null) {
+			State oldstate = state;
 			int idx = enqueuedSongs.indexOf(playing);
 			enqueuedSongs.remove(playing);
 			emit(Event.EnqueuedSongsChanged);
@@ -317,7 +311,8 @@ public class Player extends Service {
 			if (idx < enqueuedSongs.size()) {
 				playing = enqueuedSongs.get(idx);
 			}
-			play();
+			if (oldstate == State.IS_PLAYING)
+				play();
 		}
 	}
 
