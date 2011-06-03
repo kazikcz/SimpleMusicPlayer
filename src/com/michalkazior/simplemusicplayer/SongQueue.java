@@ -43,7 +43,7 @@ import android.widget.Toast;
  * 
  * The user may manage the list of enqueued songs, play, pause.
  */
-public class Main extends Activity {
+public class SongQueue extends Activity {
 	private Button playButton, skipButton;
 	private TextView songTimeTextView;
 	private SeekBar songSeekBar;
@@ -114,7 +114,7 @@ public class Main extends Activity {
 		updateTimer.schedule(new TimerTask() {
 			@Override
 			public void run() {
-				Main.this.runOnUiThread(new Runnable() {
+				SongQueue.this.runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
 						updatePlaying();
@@ -187,8 +187,8 @@ public class Main extends Activity {
 		seekZoomTimer.schedule(new TimerTask() {
 			@Override
 			public void run() {
-				int position = Main.this.songSeekBar.getProgress();
-				int duration = Main.this.songSeekBar.getMax();
+				int position = SongQueue.this.songSeekBar.getProgress();
+				int duration = SongQueue.this.songSeekBar.getMax();
 				int start = position - (duration / 4);
 				int length = duration / 2;
 
@@ -198,7 +198,7 @@ public class Main extends Activity {
 				seekZoomBegin += start;
 				seekZoomLength = length;
 
-				Main.this.runOnUiThread(new Runnable() {
+				SongQueue.this.runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
 						updatePosition(seekZoomLength / 2, seekZoomLength);
@@ -225,14 +225,14 @@ public class Main extends Activity {
 	private synchronized void setupEmptyView() {
 		if (isEmpty) return;
 
-		setContentView(R.layout.main_empty);
+		setContentView(R.layout.songqueue_empty);
 		isEmpty = true;
 	}
 
 	private synchronized void setupContentView() {
 		if (!isEmpty) return;
 
-		setContentView(R.layout.main);
+		setContentView(R.layout.songqueue);
 
 		playButton = (Button) findViewById(R.id.playButton);
 		skipButton = (Button) findViewById(R.id.skipButton);
@@ -245,15 +245,15 @@ public class Main extends Activity {
 		playButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				switch (Main.this.player.getState()) {
+				switch (SongQueue.this.player.getState()) {
 					case IS_PLAYING:
-						Main.this.player.stop();
+						SongQueue.this.player.stop();
 						break;
 					case IS_ON_HOLD_BY_CALL:
 					case IS_ON_HOLD_BY_HEADSET:
 					case IS_STOPPED:
 					case IS_PAUSED:
-						Main.this.player.play();
+						SongQueue.this.player.play();
 						break;
 				}
 			}
@@ -262,7 +262,7 @@ public class Main extends Activity {
 		skipButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				Main.this.player.playNext();
+				SongQueue.this.player.playNext();
 			}
 		});
 
@@ -275,7 +275,7 @@ public class Main extends Activity {
 			@Override
 			public void onStopTrackingTouch(SeekBar seekBar) {
 				isDraggingSeekBar = false;
-				player.seek(Main.this.seekZoomBegin + lastProgress);
+				player.seek(SongQueue.this.seekZoomBegin + lastProgress);
 				seekZoomReset();
 			}
 
@@ -346,8 +346,8 @@ public class Main extends Activity {
 		super.onCreate(savedInstanceState);
 		setupEmptyView();
 
-		startService(new Intent(Main.this, Player.class));
-		bindService(new Intent(Main.this, Player.class), playerConnection, 0);
+		startService(new Intent(SongQueue.this, Player.class));
+		bindService(new Intent(SongQueue.this, Player.class), playerConnection, 0);
 	}
 
 	@Override
@@ -423,7 +423,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						new AlertDialog.Builder(Main.this)
+						new AlertDialog.Builder(SongQueue.this)
 								.setTitle(R.string.option_menu_remove_all)
 								.setMessage(R.string.dialog_are_you_sure)
 								.setNegativeButton(R.string.dialog_no, null)
@@ -446,7 +446,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						new AlertDialog.Builder(Main.this)
+						new AlertDialog.Builder(SongQueue.this)
 								.setTitle(R.string.option_menu_shuffle)
 								.setMessage(R.string.dialog_are_you_sure)
 								.setNegativeButton(R.string.dialog_no, null)
@@ -476,7 +476,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						startActivity(new Intent(Main.this, SongList.class));
+						startActivity(new Intent(SongQueue.this, SongList.class));
 						return false;
 					}
 				});
@@ -485,7 +485,7 @@ public class Main extends Activity {
 				new OnMenuItemClickListener() {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
-						new AlertDialog.Builder(Main.this)
+						new AlertDialog.Builder(SongQueue.this)
 								.setTitle(R.string.option_menu_exit)
 								.setMessage(R.string.dialog_are_you_sure)
 								.setNegativeButton(R.string.dialog_no, null)
@@ -494,7 +494,7 @@ public class Main extends Activity {
 											@Override
 											public void onClick(DialogInterface dialog, int which) {
 												unbindService(playerConnection);
-												stopService(new Intent(Main.this, Player.class));
+												stopService(new Intent(SongQueue.this, Player.class));
 												finish();
 											}
 										})
