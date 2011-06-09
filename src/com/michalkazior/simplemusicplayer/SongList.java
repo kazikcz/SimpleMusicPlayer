@@ -58,13 +58,6 @@ public class SongList extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		bindService(new Intent(SongList.this, Player.class), playerConnection, BIND_AUTO_CREATE);
-
-		if (!Player.isExternalStorageMounted()) {
-			setContentView(R.layout.songlist_notmounted);
-			return;
-		}
-
 		setContentView(R.layout.songlist);
 
 		availableSongsListView = (ListView) findViewById(R.id.playlistAvailableSongsListView);
@@ -77,6 +70,7 @@ public class SongList extends Activity {
 				view.showContextMenu();
 			}
 		});
+		availableSongsListView.setAdapter(new SongAdapter(this, new Song[] {}));
 
 		filterEditText.setOnKeyListener(new OnKeyListener() {
 			@Override
@@ -92,6 +86,22 @@ public class SongList extends Activity {
 		});
 
 		INSTANCE = this;
+
+		bindService(new Intent(SongList.this, Player.class), playerConnection, BIND_AUTO_CREATE);
+
+		if (!Player.isExternalStorageMounted()) {
+			setContentView(R.layout.songlist_notmounted);
+			return;
+		}
+	}
+
+	@Override
+	protected void onResume() {
+		if (player != null) {
+			allSongs = player.getAllSongs();
+			updateAvailableSongsListView();
+		}
+		super.onResume();
 	}
 
 	@Override
@@ -119,8 +129,8 @@ public class SongList extends Activity {
 			if (matches) filteredSongs.add(song);
 		}
 
-		availableSongsListView.setAdapter(new SongAdapter(this, filteredSongs
-				.toArray(new Song[] {})));
+		((SongAdapter) availableSongsListView.getAdapter()).setItems(filteredSongs
+				.toArray(new Song[] {}));
 	}
 
 	@Override
