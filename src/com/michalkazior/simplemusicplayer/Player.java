@@ -156,7 +156,7 @@ public class Player extends Service {
 		Uri uri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
 		String[] columns = { MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.DISPLAY_NAME };
 		Cursor c = getContentResolver().query(uri, columns, null, null,
-				MediaStore.Audio.Media.DATA + " ASC");
+				MediaStore.Audio.Media.DATE_ADDED + " DESC");
 
 		int dataIndex = c.getColumnIndex(MediaStore.Audio.Media.DATA);
 		int displayIndex = c.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME);
