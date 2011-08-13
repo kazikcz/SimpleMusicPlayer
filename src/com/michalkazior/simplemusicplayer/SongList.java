@@ -17,11 +17,13 @@ import android.view.MenuItem;
 import android.view.MenuItem.OnMenuItemClickListener;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 
@@ -34,6 +36,7 @@ import android.widget.ListView;
 public class SongList extends Activity {
 	private ListView availableSongsListView;
 	private EditText filterEditText;
+	private Button clearButton;
 	private Song selectedSong;
 	private Song[] allSongs = {};
 	private ArrayList<Song> filteredSongs = new ArrayList<Song>();
@@ -62,6 +65,7 @@ public class SongList extends Activity {
 
 		availableSongsListView = (ListView) findViewById(R.id.playlistAvailableSongsListView);
 		filterEditText = (EditText) findViewById(R.id.playlistFilterEditText);
+		clearButton = (Button) findViewById(R.id.clearButton);
 
 		registerForContextMenu(availableSongsListView);
 		availableSongsListView.setOnItemClickListener(new OnItemClickListener() {
@@ -82,6 +86,14 @@ public class SongList extends Activity {
 					return true;
 				}
 				return false;
+			}
+		});
+
+		clearButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				filterEditText.setText("");
+				updateAvailableSongsListView();
 			}
 		});
 
