@@ -49,9 +49,11 @@ public class Player extends Service {
 	 * Possible Player states.
 	 */
 	public enum State {
-		IS_STOPPED, IS_PLAYING, IS_PAUSED, IS_ON_HOLD_BY_HEADSET, IS_ON_HOLD_BY_CALL,
+		IS_STOPPED, IS_PLAYING, IS_PAUSED,
 	};
 
+	private boolean isOnHoldByCall = false;
+	private boolean isOnHoldByHeadset = false;
 	private ArrayList<Song> enqueuedSongs = new ArrayList<Song>();
 	private MediaPlayer mp = null;
 	private State state = State.IS_STOPPED;
@@ -94,8 +96,6 @@ public class Player extends Service {
 	 */
 	public synchronized int getDuration() {
 		switch (state) {
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PLAYING:
 			case IS_PAUSED:
 				return mp.getDuration();
@@ -110,8 +110,6 @@ public class Player extends Service {
 	 */
 	public synchronized int getPosition() {
 		switch (state) {
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PLAYING:
 			case IS_PAUSED:
 				return mp.getCurrentPosition();
@@ -282,8 +280,6 @@ public class Player extends Service {
 				/* ignore */
 				break;
 
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				mp.start();
 				setState(State.IS_PLAYING);
@@ -339,8 +335,6 @@ public class Player extends Service {
 	 */
 	public synchronized void seek(int position) {
 		switch (state) {
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PLAYING:
 			case IS_PAUSED:
 				mp.seekTo(position);
@@ -359,13 +353,13 @@ public class Player extends Service {
 		switch (state) {
 			case IS_PLAYING:
 				mp.stop();
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				mp.reset();
 				mp.release();
 				mp = null;
 				playing = null;
+				isOnHoldByCall = false;
+				isOnHoldByHeadset = false;
 				setState(State.IS_STOPPED);
 				break;
 		}
@@ -388,33 +382,13 @@ public class Player extends Service {
 	}
 
 	/**
-	 * Hold the playback.
+	 * Try playback.
 	 * 
-	 * This function is used when a headset is disconnected while playing, or a
-	 * call occurs.
-	 * 
-	 * @param reason
+	 * Will playback on if all isOnHold* variables are false. 
 	 */
-	public synchronized void hold(State reason) {
-		switch (state) {
-			case IS_PLAYING:
-				stop();
-				setState(reason);
-		}
-	}
-
-	/**
-	 * Unhold the playback.
-	 * 
-	 * Yields effect only when current state matches reason.
-	 * 
-	 * @see hold()
-	 * @param reason
-	 */
-	public synchronized void unhold(State reason) {
-		if (state == reason) {
+	public synchronized void play_try() {
+		if (!isOnHoldByCall && !isOnHoldByHeadset)
 			play();
-		}
 	}
 
 	@Override
@@ -443,10 +417,12 @@ public class Player extends Service {
 			public void onReceive(Context context, Intent intent) {
 				String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
 				if (state.compareTo(TelephonyManager.EXTRA_STATE_IDLE) == 0) {
-					unhold(State.IS_ON_HOLD_BY_CALL);
+					isOnHoldByCall = false;
+					play_try();
 				}
 				else {
-					hold(State.IS_ON_HOLD_BY_CALL);
+					isOnHoldByCall = true;
+					stop();
 				}
 			}
 		}, new IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED));
@@ -470,10 +446,12 @@ public class Player extends Service {
 			public void onReceive(Context context, Intent intent) {
 				switch (intent.getIntExtra("state", -1)) {
 					case 0: /* unplugged */
-						hold(State.IS_ON_HOLD_BY_HEADSET);
+						isOnHoldByHeadset = true;
+						stop();
 						break;
 					case 1: /* plugged */
-						unhold(State.IS_ON_HOLD_BY_HEADSET);
+						isOnHoldByHeadset = false;
+						play_try();
 						break;
 				}
 			}
@@ -482,7 +460,8 @@ public class Player extends Service {
 		registerReceiver(new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
-				hold(State.IS_ON_HOLD_BY_HEADSET);
+				isOnHoldByHeadset = true;
+				stop();
 			}
 		}, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
 

@@ -146,8 +146,6 @@ public class SongQueue extends Activity {
 				updateTimerStart();
 				break;
 			case IS_STOPPED:
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				updateTimerStop();
 				break;
@@ -158,8 +156,6 @@ public class SongQueue extends Activity {
 				updatePosition(0, 0);
 				break;
 			case IS_PLAYING:
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				if (!isDraggingSeekBar) updatePosition(position, duration);
 				break;
@@ -172,8 +168,6 @@ public class SongQueue extends Activity {
 			case IS_PLAYING:
 				playButton.setText(R.string.button_pause);
 				break;
-			case IS_ON_HOLD_BY_CALL:
-			case IS_ON_HOLD_BY_HEADSET:
 			case IS_PAUSED:
 				playButton.setText(R.string.button_play);
 				break;
@@ -248,8 +242,6 @@ public class SongQueue extends Activity {
 					case IS_PLAYING:
 						SongQueue.this.player.stop();
 						break;
-					case IS_ON_HOLD_BY_CALL:
-					case IS_ON_HOLD_BY_HEADSET:
 					case IS_STOPPED:
 					case IS_PAUSED:
 						SongQueue.this.player.play();
