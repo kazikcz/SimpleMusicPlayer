@@ -10,7 +10,6 @@ public class Song implements Parcelable {
 	private String title; // todo
 
 	public static final Parcelable.Creator<Song> CREATOR = new Creator<Song>() {
-
 		@Override
 		public Song createFromParcel(Parcel source) {
 			return new Song(source);
